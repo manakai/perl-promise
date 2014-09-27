@@ -1,5 +1,7 @@
-Test::More~1.001006
 Scalar::Util~1.41
-AnyEvent~7.07
+Test::More~1.001006
 Term::ANSIColor~4.03
+AnyEvent~7.07
+File::Spec~3.47
+Path::Tiny~0.058
 Carp~1.3301
