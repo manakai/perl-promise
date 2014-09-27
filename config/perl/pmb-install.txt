@@ -1,2 +1,5 @@
 Test::More~1.001006
+Scalar::Util~1.41
 AnyEvent~7.07
+Term::ANSIColor~4.03
+Carp~1.3301
