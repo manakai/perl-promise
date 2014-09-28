@@ -9,15 +9,15 @@ sub TypeError ($$) {
   return "TypeError: " . $_[1] . Carp::shortmess ();
 } # TypeError
 
-use AnyEvent;# XXX
-sub enqueue ($) {
-  my $code = $_[0];
-  AE::postpone { $code->() };
+sub enqueue ($$) {
+  my $code = $_[1];
+  require AnyEvent;
+  AE::postpone (sub { $code->() });
 } # enqueue
 
-sub enqueue_promise_reaction_job ($$) {
-  my ($reaction, $argument) = @_;
-  enqueue sub {
+sub enqueue_promise_reaction_job ($$$) {
+  my ($reaction, $argument, $class) = @_;
+  $class->enqueue (sub {
     my $promise_capability = $reaction->{capabilities};
     if (ref $reaction->{handler} eq 'CODE') {
       my $handler_result = eval { $reaction->{handler}->($argument) };
@@ -28,22 +28,22 @@ sub enqueue_promise_reaction_job ($$) {
     } else { # handler eq identity
       return $promise_capability->{resolve}->($argument);
     }
-  };
+  });
 } # enqueue_promise_reaction_job
 
 sub create_resolving_functions ($$);
 sub enqueue_promise_resolve_thenable_job ($$$$) {
   my ($promise_to_resolve, $thenable, $then, $class) = @_;
-  enqueue sub {
+  $class->enqueue (sub {
     my $resolving_functions = create_resolving_functions $promise_to_resolve, $class;
     my $then_call_result = eval { $then->($thenable, $resolving_functions->{resolve}, $resolving_functions->{reject}) };
     return $resolving_functions->{reject}->($@) if $@;
     return $then_call_result;
-  };
+  });
 } # enqueue_promise_resolve_thenable_job
 
-sub trigger_promise_reactions ($$) {
-  enqueue_promise_reaction_job $_, $_[1] for @{$_[0] or []};
+sub trigger_promise_reactions ($$$) {
+  enqueue_promise_reaction_job $_, $_[1], $_[2] for @{$_[0] or []};
   return undef;
 } # trigger_promise_reactions
 
@@ -53,7 +53,8 @@ sub fulfill_promise ($$) {
   delete $promise->{promise_reject_reactions};
   return trigger_promise_reactions
       delete $promise->{promise_fulfill_reactions},
-      $promise->{promise_result} = $_[1];
+      $promise->{promise_result} = $_[1],
+      ref $promise;
 } # fulfill_promise
 
 sub reject_promise ($$) {
@@ -62,7 +63,8 @@ sub reject_promise ($$) {
   delete $promise->{promise_fulfill_reactions};
   return trigger_promise_reactions
       delete $promise->{promise_reject_reactions},
-      $promise->{promise_result} = $_[1];
+      $promise->{promise_result} = $_[1],
+      ref $promise;
 } # reject_promise
 
 sub create_resolving_functions ($$) {
@@ -274,9 +276,11 @@ sub then ($$$) {
         if defined $promise->{promise_reject_reactions} and
            ref $promise->{promise_reject_reactions} eq 'ARRAY';
   } elsif ($promise->{promise_state} eq 'fulfilled') {
-    enqueue_promise_reaction_job $fulfill_reaction, $promise->{promise_result};
+    enqueue_promise_reaction_job
+        $fulfill_reaction, $promise->{promise_result}, ref $promise;
   } elsif ($promise->{promise_state} eq 'rejected') {
-    enqueue_promise_reaction_job $reject_reaction, $promise->{promise_result};
+    enqueue_promise_reaction_job
+        $reject_reaction, $promise->{promise_result}, ref $promise;
   }
   return $promise_capability->{promise};
 } # then
