@@ -4,7 +4,8 @@ use warnings;
 use warnings FATAL => 'uninitialized';
 our $VERSION = '1.0';
 
-sub TypeError ($) { "TypeError: " . $_[0] }
+use Carp; # XXX
+sub TypeError ($) { "TypeError: " . $_[0] . Carp::shortmess }
 
 use AnyEvent;# XXX
 sub enqueue ($) {

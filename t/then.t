@@ -382,6 +382,60 @@ test {
   });
 } n => 1, name => 'then ng throw promise';
 
+test {
+  my $c = shift;
+  my $p = Promise->new (sub { $_[0]->('foo') });
+  $p->then (sub {
+    return $p;
+  })->then (sub {
+    my $arg = shift;
+    test {
+      is $arg, 'foo';
+      done $c;
+      undef $c;
+    } $c;
+  });
+} n => 1, name => 'circular then';
+
+test {
+  my $c = shift;
+  my $p; $p = Promise->new (sub { $_[0]->('foo') })->then (sub {
+    return $p;
+  });
+  $p->then (sub { ok 0 }, sub {
+    my $arg = shift;
+    test {
+      like $arg, qr{^TypeError};
+      done $c;
+      undef $c;
+    } $c;
+  });
+} n => 1, name => 'circular then';
+
+{
+  package test::ThenPromise1;
+  our @ISA = qw(Promise);
+}
+{
+  package test::ThenPromise2;
+  our @ISA = qw(Promise);
+}
+
+test {
+  my $c = shift;
+  my $p1 = test::ThenPromise1->new (sub { $_[0]->() });
+  my $p2 = $p1->then (sub { return test::ThenPromise2->new (sub { $_[0]->(12) }) });
+  isa_ok $p2, 'test::ThenPromise1';
+  $p2->then (sub {
+    my $arg = shift;
+    test {
+      is $arg, 12;
+      done $c;
+      undef $c;
+    } $c;
+  });
+} n => 2, name => 'different subclasses';
+
 run_tests;
 
 =head1 LICENSE
