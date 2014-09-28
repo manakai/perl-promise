@@ -290,6 +290,98 @@ test {
   done $c;
 } n => 1, name => 'then class';
 
+test {
+  my $c = shift;
+  my $p1 = Promise->new (sub { $_[0]->('foo') });
+  $p1->then (sub {
+    my $p2 = Promise->new (sub { $_[0]->('fuga') });
+    return $p2;
+  })->then (sub {
+    my $arg = shift;
+    test {
+      is $arg, 'fuga';
+      done $c;
+      undef $c;
+    } $c;
+  });
+} n => 1, name => 'then ok return promise ok';
+
+test {
+  my $c = shift;
+  my $p1 = Promise->new (sub { $_[0]->('foo') });
+  $p1->then (sub {
+    my $p2 = Promise->new (sub { $_[1]->('fuga') });
+    return $p2;
+  })->catch (sub {
+    my $arg = shift;
+    test {
+      is $arg, 'fuga';
+      done $c;
+      undef $c;
+    } $c;
+  });
+} n => 1, name => 'then ok return promise ng';
+
+test {
+  my $c = shift;
+  my $p1 = Promise->new (sub { $_[0]->('foo') });
+  $p1->then (sub {
+    return Promise->new (sub { my $d = $_[1]; AE::postpone { $d->('fuga') } });
+  })->catch (sub {
+    my $arg = shift;
+    test {
+      is $arg, 'fuga';
+      done $c;
+      undef $c;
+    } $c;
+  });
+} n => 1, name => 'then ok return promise ng';
+
+test {
+  my $c = shift;
+  my $p1 = Promise->new (sub { $_[0]->('foo') });
+  Promise->new (sub { $_[1]->() })->then (undef, sub {
+    return $p1;
+  })->then (sub {
+    my $arg = shift;
+    test {
+      is $arg, 'foo';
+      done $c;
+      undef $c;
+    } $c;
+  });
+} n => 1, name => 'then ng return promise ok';
+
+test {
+  my $c = shift;
+  my $p1 = Promise->new (sub { $_[1]->('foo') });
+  Promise->new (sub { $_[1]->() })->then (undef, sub {
+    return $p1;
+  })->catch (sub {
+    my $arg = shift;
+    test {
+      is $arg, 'foo';
+      done $c;
+      undef $c;
+    } $c;
+  });
+} n => 1, name => 'then ng return promise ng';
+
+test {
+  my $c = shift;
+  my $p1 = Promise->new (sub { });
+  Promise->new (sub { $_[1]->() })->then (undef, sub {
+    die $p1;
+  })->catch (sub {
+    my $arg = shift;
+    test {
+      is $arg, $p1;
+      done $c;
+      undef $c;
+    } $c;
+  });
+} n => 1, name => 'then ng throw promise';
+
 run_tests;
 
 =head1 LICENSE

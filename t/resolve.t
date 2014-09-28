@@ -137,6 +137,48 @@ test {
   done $c;
 } n => 2, name => 'resolve promise';
 
+@test::PromiseSubclass::ISA = qw(Promise);
+
+test {
+  my $c = shift;
+  my $invoked = 0;
+  my $p1 = test::PromiseSubclass->new (sub { $_[0]->('hoge') });
+  $p1->then (sub { $invoked++ });
+  my $p2 = Promise->resolve ($p1);
+  isa_ok $p2, 'Promise';
+  ok not $p2->isa ('test::PromiseSubclass');
+  $p2->then (sub {
+    $invoked++;
+    my $arg = shift;
+    test {
+      is $arg, 'hoge';
+      is $invoked, 2;
+      done $c;
+      undef $c;
+    } $c;
+  });
+} n => 4, name => 'resolve promise-subclass ok';
+
+test {
+  my $c = shift;
+  my $invoked = 0;
+  my $p1 = test::PromiseSubclass->new (sub { $_[1]->('hoge') });
+  $p1->catch (sub { $invoked++ });
+  my $p2 = Promise->resolve ($p1);
+  isa_ok $p2, 'Promise';
+  ok not $p2->isa ('test::PromiseSubclass');
+  $p2->then (undef, sub {
+    $invoked++;
+    my $arg = shift;
+    test {
+      is $arg, 'hoge';
+      is $invoked, 2;
+      done $c;
+      undef $c;
+    } $c;
+  });
+} n => 4, name => 'resolve promise-subclass ng';
+
 run_tests;
 
 =head1 LICENSE
