@@ -1,8 +1,10 @@
 use strict;
 use warnings;
 use Path::Tiny;
+use lib glob path (__FILE__)->parent->parent->child ('t_deps/lib');
 use lib glob path (__FILE__)->parent->parent->child ('t_deps/modules/*/lib');
 use Test::X1;
+use Test::Dies;
 use Test::More;
 use Promise;
 
@@ -435,6 +437,28 @@ test {
     } $c;
   });
 } n => 2, name => 'different subclasses';
+
+test {
+  my $c = shift;
+  dies_ok {
+    Promise->can ('then')->({promise_state => 'foo'}, sub {});
+  };
+  ok not ref $@;
+  like $@, qr{^TypeError};
+  like $@, qr{ at \Q@{[__FILE__]}\E line \Q@{[__LINE__-4]}\E};
+  done $c;
+} n => 4, name => 'then not promise';
+
+test {
+  my $c = shift;
+  dies_here_ok {
+    Promise->can ('then')->((bless {promise_state => 'foo'}, 'foo'), sub {});
+  };
+  ok not ref $@;
+  like $@, qr{^TypeError};
+  like $@, qr{ at \Q@{[__FILE__]}\E line \Q@{[__LINE__-4]}\E};
+  done $c;
+} n => 4, name => 'then promise-like';
 
 run_tests;
 

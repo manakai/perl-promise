@@ -4,8 +4,10 @@ use warnings;
 use warnings FATAL => 'uninitialized';
 our $VERSION = '1.0';
 
-use Carp; # XXX
-sub TypeError ($) { "TypeError: " . $_[0] . Carp::shortmess }
+sub TypeError ($$) {
+  require Carp;
+  return "TypeError: " . $_[1] . Carp::shortmess ();
+} # TypeError
 
 use AnyEvent;# XXX
 sub enqueue ($) {
@@ -29,11 +31,11 @@ sub enqueue_promise_reaction_job ($$) {
   };
 } # enqueue_promise_reaction_job
 
-sub create_resolving_functions ($);
-sub enqueue_promise_resolve_thenable_job ($$$) {
-  my ($promise_to_resolve, $thenable, $then) = @_;
+sub create_resolving_functions ($$);
+sub enqueue_promise_resolve_thenable_job ($$$$) {
+  my ($promise_to_resolve, $thenable, $then, $class) = @_;
   enqueue sub {
-    my $resolving_functions = create_resolving_functions $promise_to_resolve;
+    my $resolving_functions = create_resolving_functions $promise_to_resolve, $class;
     my $then_call_result = eval { $then->($thenable, $resolving_functions->{resolve}, $resolving_functions->{reject}) };
     return $resolving_functions->{reject}->($@) if $@;
     return $then_call_result;
@@ -63,15 +65,15 @@ sub reject_promise ($$) {
       $promise->{promise_result} = $_[1];
 } # reject_promise
 
-sub create_resolving_functions ($) {
-  my $promise = $_[0];
+sub create_resolving_functions ($$) {
+  my ($promise, $class) = @_;
   my $already_resolved = 0;
   my $resolve = sub ($$) { ## promise resolve function
     my ($resolution) = @_;
     return undef if $already_resolved;
     $already_resolved = 1;
     if (defined $resolution and $resolution eq $promise) { # SameValue
-      my $self_resolution_error = TypeError 'SelfResolutionError';
+      my $self_resolution_error = $class->TypeError ('SelfResolutionError');
       return reject_promise $promise, $self_resolution_error;
     }
     if (not defined $resolution or not ref $resolution) {
@@ -82,7 +84,7 @@ sub create_resolving_functions ($) {
     unless (defined $then and ref $then eq 'CODE') {
       return fulfill_promise $promise, $resolution;
     }
-    enqueue_promise_resolve_thenable_job $promise, $resolution, $then;
+    enqueue_promise_resolve_thenable_job $promise, $resolution, $then, $class;
     return undef;
   };
   my $reject = sub ($$) { ## promise reject function
@@ -96,21 +98,24 @@ sub create_resolving_functions ($) {
 
 sub create_promise_capability_record ($$) {
   my ($promise, $class) = @_;
+  my $error_class = $class->can ('TypeError') ? $class : __PACKAGE__;
   my $promise_capability = {promise => $promise};
   my $executor = sub ($$$) { # GetCapabilitiesExecutor function
-    die TypeError 'The resolver is already specified'
+    die $error_class->TypeError ('The resolver is already specified')
         if defined $promise_capability->{resolve};
-    die TypeError 'The reject handler is already specified'
+    die $error_class->TypeError ('The reject handler is already specified')
         if defined $promise_capability->{reject};
     $promise_capability->{resolve} = $_[0];
     $promise_capability->{reject} = $_[1];
     return undef;
   };
-  $class->can ('_new')->($promise, $executor); # or throw
-  die TypeError 'The executor is not invoked or the resolver is not specified'
-      unless ref $promise_capability->{resolve} eq 'CODE';
-  die TypeError 'The executor is not invoked or the reject handler is not specified'
-      unless ref $promise_capability->{reject} eq 'CODE';
+  ($class->can ('_new') or sub { })->($promise, $executor);
+  die $error_class->TypeError ('The executor is not invoked or the resolver is not specified')
+      unless defined $promise_capability->{resolve} and
+             ref $promise_capability->{resolve} eq 'CODE';
+  die $error_class->TypeError ('The executor is not invoked or the reject handler is not specified')
+      unless defined $promise_capability->{reject} and
+             ref $promise_capability->{reject} eq 'CODE';
   return $promise_capability;
 } # create_promise_capability_record
 
@@ -122,16 +127,17 @@ sub new_promise_capability ($) {
 
 sub is_promise ($) {
   return 0 unless defined $_[0] and ref $_[0];
+  return 0 if ref $_[0] eq 'HASH';
   local $@;
   return defined eval { $_[0]->{promise_state} };
 } # is_promise
 
-sub initialize_promise ($$) {
-  my ($promise, $executor) = @_;
+sub initialize_promise ($$$) {
+  my ($promise, $executor, $class) = @_;
   $promise->{promise_state} = 'pending';
   $promise->{promise_fulfill_reactions} = [];
   $promise->{promise_reject_reactions} = [];
-  my $resolving_functions = create_resolving_functions $promise;
+  my $resolving_functions = create_resolving_functions $promise, $class;
   $executor->($resolving_functions->{resolve}, $resolving_functions->{reject});
   $resolving_functions->{reject}->($@) if $@;
   return $promise;
@@ -146,9 +152,9 @@ sub new ($$) {
 
 sub _new ($) {
   my ($promise, $executor) = @_;
-  die TypeError 'The executor is not a code reference'
+  die $promise->TypeError ('The executor is not a code reference')
       unless ref $executor eq 'CODE';
-  return initialize_promise $promise, $executor;
+  return initialize_promise $promise, $executor, ref $promise;
 } # _new
 
 sub all ($$) {
@@ -249,7 +255,7 @@ sub catch ($$) {
 
 sub then ($$$) {
   my ($promise, $onfulfilled, $onrejected) = @_;
-  die TypeError 'The context object is not a promise'
+  die __PACKAGE__->TypeError ('The context object is not a promise')
       unless is_promise $promise;
   $onfulfilled = 'identity'
       if not defined $onfulfilled or not ref $onfulfilled eq 'CODE';
@@ -261,8 +267,12 @@ sub then ($$$) {
   my $reject_reaction = {capabilities => $promise_capability,
                          handler => $onrejected};
   if ($promise->{promise_state} eq 'pending') {
-    push @{$promise->{promise_fulfill_reactions}}, $fulfill_reaction;
-    push @{$promise->{promise_reject_reactions}}, $reject_reaction;
+    push @{$promise->{promise_fulfill_reactions}}, $fulfill_reaction
+        if defined $promise->{promise_fulfill_reactions} and
+           ref $promise->{promise_fulfill_reactions} eq 'ARRAY';
+    push @{$promise->{promise_reject_reactions}}, $reject_reaction
+        if defined $promise->{promise_reject_reactions} and
+           ref $promise->{promise_reject_reactions} eq 'ARRAY';
   } elsif ($promise->{promise_state} eq 'fulfilled') {
     enqueue_promise_reaction_job $fulfill_reaction, $promise->{promise_result};
   } elsif ($promise->{promise_state} eq 'rejected') {
