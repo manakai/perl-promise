@@ -11,12 +11,10 @@ use Promise;
 {
   package test::Promise;
   our @ISA = qw(Promise);
-  use Carp;
-
   our @QUEUE;
-  sub enqueue ($$) {
+  sub _enqueue ($$) {
     push @QUEUE, $_[1];
-  } # enqueue
+  } # _enqueue
 }
 
 test {

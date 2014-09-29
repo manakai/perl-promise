@@ -13,9 +13,9 @@ use Promise;
   our @ISA = qw(Promise);
   use Carp;
 
-  sub TypeError ($$) {
+  sub _type_error ($$) {
     return bless {message => $_[1], location => Carp::shortmess}, 'test::TypeError';
-  } # TypeError
+  } # _type_error
 
   package test::TypeError;
 }

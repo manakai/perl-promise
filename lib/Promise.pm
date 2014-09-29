@@ -4,20 +4,22 @@ use warnings;
 use warnings FATAL => 'uninitialized';
 our $VERSION = '1.0';
 
-sub TypeError ($$) {
+our $CreateTypeError ||= sub ($$) {
   require Carp;
   return "TypeError: " . $_[1] . Carp::shortmess ();
-} # TypeError
+};
+sub _type_error ($$) { $CreateTypeError->(@_) }
 
-sub enqueue ($$) {
+our $Enqueue = sub ($$) {
   my $code = $_[1];
   require AnyEvent;
   AE::postpone (sub { $code->() });
-} # enqueue
+};
+sub _enqueue ($$) { $Enqueue->(@_) }
 
 sub enqueue_promise_reaction_job ($$$) {
   my ($reaction, $argument, $class) = @_;
-  $class->enqueue (sub {
+  $class->_enqueue (sub {
     my $promise_capability = $reaction->{capabilities};
     if (ref $reaction->{handler} eq 'CODE') {
       my $handler_result = eval { $reaction->{handler}->($argument) };
@@ -34,7 +36,7 @@ sub enqueue_promise_reaction_job ($$$) {
 sub create_resolving_functions ($$);
 sub enqueue_promise_resolve_thenable_job ($$$$) {
   my ($promise_to_resolve, $thenable, $then, $class) = @_;
-  $class->enqueue (sub {
+  $class->_enqueue (sub {
     my $resolving_functions = create_resolving_functions $promise_to_resolve, $class;
     my $then_call_result = eval { $then->($thenable, $resolving_functions->{resolve}, $resolving_functions->{reject}) };
     return $resolving_functions->{reject}->($@) if $@;
@@ -75,7 +77,7 @@ sub create_resolving_functions ($$) {
     return undef if $already_resolved;
     $already_resolved = 1;
     if (defined $resolution and $resolution eq $promise) { # SameValue
-      my $self_resolution_error = $class->TypeError ('SelfResolutionError');
+      my $self_resolution_error = $class->_type_error ('SelfResolutionError');
       return reject_promise $promise, $self_resolution_error;
     }
     if (not defined $resolution or not ref $resolution) {
@@ -100,22 +102,24 @@ sub create_resolving_functions ($$) {
 
 sub create_promise_capability_record ($$) {
   my ($promise, $class) = @_;
-  my $error_class = $class->can ('TypeError') ? $class : __PACKAGE__;
+  my $error_class = $class->can ('_type_error') ? $class : __PACKAGE__;
   my $promise_capability = {promise => $promise};
   my $executor = sub ($$$) { # GetCapabilitiesExecutor function
-    die $error_class->TypeError ('The resolver is already specified')
+    die $error_class->_type_error ('The resolver is already specified')
         if defined $promise_capability->{resolve};
-    die $error_class->TypeError ('The reject handler is already specified')
+    die $error_class->_type_error ('The reject handler is already specified')
         if defined $promise_capability->{reject};
     $promise_capability->{resolve} = $_[0];
     $promise_capability->{reject} = $_[1];
     return undef;
   };
   ($class->can ('_new') or sub { })->($promise, $executor);
-  die $error_class->TypeError ('The executor is not invoked or the resolver is not specified')
+  die $error_class->_type_error
+      ('The executor is not invoked or the resolver is not specified')
       unless defined $promise_capability->{resolve} and
              ref $promise_capability->{resolve} eq 'CODE';
-  die $error_class->TypeError ('The executor is not invoked or the reject handler is not specified')
+  die $error_class->_type_error
+      ('The executor is not invoked or the reject handler is not specified')
       unless defined $promise_capability->{reject} and
              ref $promise_capability->{reject} eq 'CODE';
   return $promise_capability;
@@ -154,7 +158,7 @@ sub new ($$) {
 
 sub _new ($) {
   my ($promise, $executor) = @_;
-  die $promise->TypeError ('The executor is not a code reference')
+  die $promise->_type_error ('The executor is not a code reference')
       unless ref $executor eq 'CODE';
   return initialize_promise $promise, $executor, ref $promise;
 } # _new
@@ -257,7 +261,7 @@ sub catch ($$) {
 
 sub then ($$$) {
   my ($promise, $onfulfilled, $onrejected) = @_;
-  die __PACKAGE__->TypeError ('The context object is not a promise')
+  die __PACKAGE__->_type_error ('The context object is not a promise')
       unless is_promise $promise;
   $onfulfilled = 'identity'
       if not defined $onfulfilled or not ref $onfulfilled eq 'CODE';
@@ -284,6 +288,14 @@ sub then ($$$) {
   }
   return $promise_capability->{promise};
 } # then
+
+sub DESTROY ($) {
+  local $@;
+  eval { die };
+  if ($@ =~ /during global destruction/) {
+    warn "Possible memory leak detected";
+  }
+} # DESTROY
 
 1;
 
