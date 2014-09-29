@@ -1,0 +1,192 @@
+=head1 NAME
+
+Promise - A promise implementation
+
+=head1 SYNOPSIS
+
+  use Promise;
+  
+  $p = Promise->new (sub {
+    my ($resolve, $reject) = @_;
+    some_async_action (sub {
+      if ($error) {
+        $reject->($error);
+      } else {
+        $resolve->($result);
+      }
+    });
+  });
+  $p->then (sub {
+    my $result = shift;
+    ...
+  }, sub {
+    my $error = shift;
+    ...
+  });
+
+=head1 DESCRIPTION
+
+The C<Promise> module defines a promise class, which provides an API
+similar to JavaScript C<Promise> objects.
+
+A promise is to be fulfilled or rejected.  When fulfilled with a
+result value, any fulfilled callback(s) registered with the promise
+are invoked with the value.  When rejected with a result value, any
+rejected callback(s) registered with the promise are invoked with the
+value.
+
+A promise can be resolved.  When resolved with another promise, the
+original promise is fulfilled or rejected when the other promise is
+fulfilled or rejected.  When resolved with a non-promise value, the
+promise is fulfilled with the value.
+
+=head1 METHODS
+
+There are following class methods:
+
+=over 4
+
+=item $p = Promise->new (CODE)
+
+Create a new promise object.  There must be an argument, which must be
+a code reference.  It is expected that the code, when invoked, calls
+either the first or the second argument to the code synchronously or
+asynchronously.
+
+To resolve the promise created, the first argument (C<$_[0]>), which
+is a code reference, must be invoked.  If an argument is specified to
+the code, it is used to resolve the promise.  Otherwise, C<undef> is
+used to resolve the promise.
+
+To reject the promise created, the second argument (C<$_[1]>), which
+is a code reference, must be invoked.  If an argument is specified to
+the code, it is used to reject the promise.  Otherwise, C<undef> is
+used to reject the promise.
+
+=item $p = Promise->all ([$p1, $p2, ...])
+
+Create a new promise object, which is to be fulfilled when all of the
+promises specified in the argument are fulfilled.
+
+The argument must be an array reference (or an object which can be
+evaluated as if it were an array reference).
+
+The promise created is to be fulfilled when all of the promises are
+fulfilled, with an array reference which contains the resolved values
+of the values included in the array in the argument, in same order.
+
+The promise is to be rejected when any of the promises is rejected,
+with the value of the rejected promise.
+
+=item $p = Promise->race ([$p1, $p2, ...])
+
+Create a new promise object, which is to be fulfilled when any of the
+promises specified in the argument are fulfilled.
+
+The argument must be an array reference (or an object which can be
+evaluated as if it were an array reference).
+
+The promise is to be fulfilled or rejected when any of the promises is
+fulfilled or rejected, with the value of the fulfilled or rejected
+promise.
+
+=item $p = Promise->reject ($r)
+
+Create a promise, which is rejected by the value specified as the
+argument.
+
+=item $p = Promise->resolve ($x)
+
+Create a promise, which is resolved with the value specified as the
+argument.  If the argument is a promise, it is returned unchanged.
+
+=back
+
+A promise has following methods:
+
+=over 4
+
+=item $p2 = $p->then ($onfulfilled, $onrejected)
+
+Register callback functions invoked when the promise is fulfilled or
+rejected.
+
+If the first argument is a code reference, it is invoked when the
+promise is fulfilled, with the result value as the first argument
+(C<$_[0]>).
+
+If the second argument is a code reference, it is invoked when the
+promise is rejected, with the result value as the first argument
+(C<$_[0]>).
+
+The method returns a new promise.  When the fulfilled or rejected
+callback is invoked, the new promise is resolved with the return value
+of the callback.  When the fulfilled or rejected callback throws an
+exception the new promise is rejected with the exception.  When the
+rejected callback is not specified or not a code reference and the
+original promise is rejected, the new promise is rejected with the
+result value of the original promise.
+
+=item $p2 = $p->catch ($onrejected)
+
+Register callback functions invoked when the promise is rejected.
+This method invocation has same effect as C<< $p2 = $p->then (undef,
+$onrejected) >>.
+
+=back
+
+=head1 ERRORS
+
+By default, the string containing a short description of the error is
+used when the JavaScript C<Promise> API would use a C<TypeError>.
+
+By setting C<$Promise::CreateTypeError> variable to a code reference,
+or by subclassing and overridding C<_type_error> method, any value can
+be used as an exception instead of the string.  The code or method is
+invoked with the short description as the first method argument
+(C<$_[1]>) and is expected to return a value that is to be used as an
+exception.  It is expected not to throw any exception.
+
+=head1 EVENT LOOP
+
+Fulfilled and rejected callbacks are expected to be invoked by queuing
+them to some kind of event scheduling mechanism.
+
+By default, this is implemented using L<AnyEvent>.  By setting
+C<$Promise::Enqueue> variable to a code reference, or by subclassing
+and overridding C<_enqueue> method, any event scheduling mechanism can
+be used instead.  The code or method is invoked with the code
+reference as the first method argument (C<$_[1]>).  It is expected not
+to throw any exception.  It is expected that the code reference is
+enqueued and to be invoked later.
+
+=head1 DEPENDENCY
+
+The module requires Perl 5.8 or later.
+
+By default the module also requires L<Carp> and L<AnyEvent>.  However
+they are not required when error and event loop handlers are replaced
+as described in previous sections.
+
+Otherwise the module has no dependency.  The module can be used by
+simply copying the module file into your Perl execution environment,
+or by adding the Git repository as a submodule of your Perl
+application.
+
+=head1 SEE ALSO
+
+ECMAScript Language Specification
+<http://people.mozilla.org/~jorendorff/es6-draft.html#sec-promise-objects>.
+
+=head1 AUTHOR
+
+Wakaba <wakaba@suikawiki.org>.
+
+=head1 LICENSE
+
+Copyright 2014 Wakaba <wakaba@suikawiki.org>.
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut
