@@ -100,6 +100,14 @@ argument.
 Create a promise, which is resolved with the value specified as the
 argument.  If the argument is a promise, it is returned unchanged.
 
+=item $p = Promise->from_cv ($cv)
+
+Create a promise, which is resolved with the value received by the
+condvar specified as the argument.  The argument must be an object
+with the C<cb> method.  The argument is typically an
+L<AnyEvent::CondVar> object, though any object compatible with
+L<AnyEvent::CondVar> API can be used.
+
 =back
 
 A promise has following methods:
@@ -134,6 +142,9 @@ This method invocation has same effect as C<< $p2 = $p->then (undef,
 $onrejected) >>.
 
 =back
+
+All methods except for C<from_cv> act in similar way to methods with
+same name in JavaScript C<Promise> API.
 
 =head1 ERRORS
 
