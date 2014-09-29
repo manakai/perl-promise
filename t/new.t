@@ -186,6 +186,15 @@ test {
   done $c;
 } n => 2, name => 'new bad arg';
 
+test {
+  my $c = shift;
+  dies_here_ok {
+    Promise->new (sub { die });
+  };
+  unlike $@, qr{^TypeError};
+  done $c;
+} n => 2, name => 'new exception in code';
+
 run_tests;
 
 =head1 LICENSE
