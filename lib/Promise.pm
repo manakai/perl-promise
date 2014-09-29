@@ -289,6 +289,16 @@ sub then ($$$) {
   return $promise_capability->{promise};
 } # then
 
+sub from_cv ($$) {
+  my ($class, $cv) = @_;
+  return $class->new (sub {
+    my $cb = $_[0];
+    $cv->cb (sub {
+      $cb->($_[0]->recv);
+    });
+  });
+} # from_cv
+
 sub DESTROY ($) {
   local $@;
   eval { die };
