@@ -18,6 +18,7 @@ use Promise;
   } # _type_error
 
   package test::TypeError;
+  use overload '""' => sub { "test::TypeError: $_[0]->{message}" }, fallback => 1;
 }
 
 test {
@@ -52,8 +53,8 @@ test {
   our @ISA = qw(test::Promise);
   sub _new {
     my ($self, $executor) = @_;
+    $self->SUPER::_new ($executor);
     $executor->(sub { }, sub { });
-    return $self->SUPER::_new ($executor);
   }
 }
 test {
@@ -81,7 +82,8 @@ test {
   sub _new {
     my ($self, $executor) = @_;
     $executor->(undef, sub { });
-    return $self->SUPER::_new ($executor);
+    $executor->(sub { }, sub { });
+    $self->SUPER::_new ($executor);
   }
 }
 test {

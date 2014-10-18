@@ -188,12 +188,35 @@ test {
 
 test {
   my $c = shift;
-  dies_here_ok {
-    Promise->new (sub { die });
-  };
-  unlike $@, qr{^TypeError};
-  done $c;
-} n => 2, name => 'new exception in code';
+  my $p = Promise->new (sub { die "hogefuga" });
+  isa_ok $p, 'Promise';
+  ok not $@;
+  $p->then (sub {
+    test {
+      ok 0;
+    } $c;
+  }, sub {
+    my $result = $_[0];
+    test {
+      is $result, qq{hogefuga at @{[__FILE__]} line @{[__LINE__-10]}.\n};
+    } $c;
+  })->then (sub { done $c; undef $c });
+} n => 3, name => 'new exception in code';
+
+test {
+  my $c = shift;
+  eval { die "fuga" };
+  my $p = Promise->new (sub { $_[0]->(123) });
+  isa_ok $p, 'Promise';
+  $p->then (sub {
+    my $result = $_[0];
+    test {
+      is $result, 123;
+    } $c;
+  }, sub {
+    test { ok 0 } $c;
+  })->then (sub { done $c; undef $c }, sub { done $c; undef $c });
+} n => 2, name => '$@ then new';
 
 run_tests;
 
