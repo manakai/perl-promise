@@ -10,17 +10,17 @@ sub _get_caller () {
       (Carp::short_error_loc() || Carp::long_error_loc());
 } # _get_caller
 
-our $CreateTypeError ||= sub ($$) {
+$Promise::CreateTypeError ||= sub ($$) {
   return "TypeError: " . $_[1] . Carp::shortmess ();
 };
-sub _type_error ($$) { $CreateTypeError->(@_) }
+sub _type_error ($$) { $Promise::CreateTypeError->(@_) }
 
-our $Enqueue = sub ($$) {
+$Promise::Enqueue = sub ($$) {
   my $code = $_[1];
   require AnyEvent;
   AE::postpone (sub { $code->() });
 };
-sub _enqueue ($$) { $Enqueue->(@_) }
+sub _enqueue ($$) { $Promise::Enqueue->(@_) }
 
 sub enqueue_promise_reaction_job ($$$) {
   my ($reaction, $argument, $class) = @_;
