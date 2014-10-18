@@ -10,17 +10,17 @@ sub _get_caller () {
       (Carp::short_error_loc() || Carp::long_error_loc());
 } # _get_caller
 
-our $CreateTypeError ||= sub ($$) {
+$Promise::CreateTypeError ||= sub ($$) {
   return "TypeError: " . $_[1] . Carp::shortmess ();
 };
-sub _type_error ($$) { $CreateTypeError->(@_) }
+sub _type_error ($$) { $Promise::CreateTypeError->(@_) }
 
-our $Enqueue = sub ($$) {
+$Promise::Enqueue = sub ($$) {
   my $code = $_[1];
   require AnyEvent;
   AE::postpone (sub { $code->() });
 };
-sub _enqueue ($$) { $Enqueue->(@_) }
+sub _enqueue ($$) { $Promise::Enqueue->(@_) }
 
 sub enqueue_promise_reaction_job ($$$) {
   my ($reaction, $argument, $class) = @_;
@@ -294,6 +294,7 @@ sub then ($$$) {
     enqueue_promise_reaction_job
         $reject_reaction, $promise->{promise_result}, ref $promise;
   }
+  $promise->{catch_registered} = 1;
   return $promise_capability->{promise};
 } # then
 
@@ -318,6 +319,13 @@ sub debug_info ($) {
 } # debug_info
 
 sub DESTROY ($) {
+  if (not $_[0]->{catch_registered} and
+      defined $_[0]->{promise_state} and
+      $_[0]->{promise_state} eq 'rejected') {
+    my $msg = "Uncaught rejection: @{[defined $_[0]->{promise_result} ? $_[0]->{promise_result} : '(undef)']}";
+    $msg .= " for " . $_[0]->debug_info . "\n" unless $msg =~ /\n$/;
+    warn $msg;
+  }
   local $@;
   eval { die };
   if ($@ =~ /during global destruction/) {

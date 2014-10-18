@@ -26,6 +26,7 @@ test {
   my $c = shift;
   my $p = Promise->new (sub { $_[1]->() });
   is $p->debug_info, '{Promise: rejected, created at '.__FILE__.' line '.(__LINE__-1).'}';
+  $p->catch (sub { }); # catch warning
   done $c;
 } n => 1, name => 'new rejected';
 
@@ -40,6 +41,7 @@ test {
   my $c = shift;
   my $p = Promise->reject;
   is $p->debug_info, '{Promise: rejected, created at '.__FILE__.' line '.(__LINE__-1).'}';
+  $p->catch (sub { }); # catch warning
   done $c;
 } n => 1, name => 'reject';
 
