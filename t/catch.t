@@ -199,6 +199,18 @@ test {
   });
 } n => 1, name => 'catch ng promise';
 
+test {
+  my $c = shift;
+  Promise->new (sub { $_[1]->(45) })->catch->then (sub {
+    test { ok 0 } $c;
+  }, sub {
+    my $r = $_[0];
+    test {
+      is $r, 45;
+    } $c;
+  })->then (sub { done $c; undef $c });
+} n => 1, name => 'catch no arg';
+
 run_tests;
 
 =head1 LICENSE
