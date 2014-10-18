@@ -294,6 +294,7 @@ sub then ($$$) {
     enqueue_promise_reaction_job
         $reject_reaction, $promise->{promise_result}, ref $promise;
   }
+  $promise->{catch_registered} = 1;
   return $promise_capability->{promise};
 } # then
 
@@ -318,6 +319,13 @@ sub debug_info ($) {
 } # debug_info
 
 sub DESTROY ($) {
+  if (not $_[0]->{catch_registered} and
+      defined $_[0]->{promise_state} and
+      $_[0]->{promise_state} eq 'rejected') {
+    my $msg = "Uncaught rejection: @{[defined $_[0]->{promise_result} ? $_[0]->{promise_result} : '(undef)']}";
+    $msg .= " for " . $_[0]->debug_info . "\n" unless $msg =~ /\n$/;
+    warn $msg;
+  }
   local $@;
   eval { die };
   if ($@ =~ /during global destruction/) {
