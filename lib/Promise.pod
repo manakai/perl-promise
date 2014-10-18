@@ -141,10 +141,14 @@ Register callback functions invoked when the promise is rejected.
 This method invocation has same effect as C<< $p2 = $p->then (undef,
 $onrejected) >>.
 
+=item $string = $p2->debug_info
+
+Return a short character string that might be useful for debugging.
+
 =back
 
-All methods except for C<from_cv> act in similar way to methods with
-same name in JavaScript C<Promise> API.
+All methods except for C<from_cv> and C<debug_info> act in similar way
+to methods with same name in JavaScript C<Promise> API.
 
 =head1 ERRORS
 
@@ -173,11 +177,12 @@ enqueued and to be invoked later.
 
 =head1 DEPENDENCY
 
-The module requires Perl 5.8 or later.
+The module requires Perl 5.8 or later and L<Carp> (which is a core
+module).
 
-By default the module also requires L<Carp> and L<AnyEvent>.  However
-they are not required when error and event loop handlers are replaced
-as described in previous sections.
+By default the module also requires L<AnyEvent>.  However they are not
+required when event loop handlers are replaced as described in
+previous sections.
 
 Otherwise the module has no dependency.  The module can be used by
 simply copying the module file into your Perl execution environment,
