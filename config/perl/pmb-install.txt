@@ -4,5 +4,5 @@ Term::ANSIColor~4.03
 AnyEvent~7.07
 File::Spec~3.47
 Carp~1.3301
-Test::More~1.001008
+Test::More~1.001009
 Path::Tiny~0.059
