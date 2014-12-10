@@ -1,7 +1,7 @@
 Scalar::Util~1.41
 parent~0.228
 Term::ANSIColor~4.03
-AnyEvent~7.07
+AnyEvent~7.08
 File::Spec~3.47
 Carp~1.3301
 Test::More~1.001009
