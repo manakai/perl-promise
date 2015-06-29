@@ -5,4 +5,4 @@ AnyEvent~7.09
 File::Spec~3.47
 Carp~1.36
 Test::More~1.001014
-Path::Tiny~0.068
+Path::Tiny~0.070
