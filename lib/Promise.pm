@@ -2,7 +2,7 @@ package Promise;
 use strict;
 use warnings;
 use warnings FATAL => 'uninitialized';
-our $VERSION = '2.0';
+our $VERSION = '3.0';
 use Carp;
 
 sub _get_caller () {
@@ -308,6 +308,17 @@ sub from_cv ($$) {
   });
 } # from_cv
 
+sub to_cv ($) {
+  require AnyEvent;
+  my $cv = AE::cv ();
+  $_[0]->then (sub {
+    $cv->send ($_[0]);
+  }, sub {
+    $cv->croak ($_[0]);
+  });
+  return $cv;
+} # to_cv
+
 sub debug_info ($) {
   my $self = $_[0];
   no warnings 'uninitialized';
@@ -337,7 +348,7 @@ sub DESTROY ($) {
 
 =head1 LICENSE
 
-Copyright 2014 Wakaba <wakaba@suikawiki.org>.
+Copyright 2014-2015 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
