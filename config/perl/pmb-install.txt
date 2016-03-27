@@ -1,4 +1,4 @@
-Scalar::Util~1.44
+Scalar::Util~1.45
 Test::More~1.001014
 Term::ANSIColor~4.05
 AnyEvent~7.12
