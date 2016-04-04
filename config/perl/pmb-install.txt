@@ -3,4 +3,4 @@ Test::More~1.001014
 Term::ANSIColor~4.05
 AnyEvent~7.12
 Carp~1.38
-Path::Tiny~0.084
+Path::Tiny~0.086
