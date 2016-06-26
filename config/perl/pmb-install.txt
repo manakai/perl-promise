@@ -1,5 +1,5 @@
 Scalar::Util~1.45
-Test::More~1.302031
+Test::More~1.302033
 Term::ANSIColor~4.05
 AnyEvent~7.12
 Carp~1.38
