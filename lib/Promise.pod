@@ -214,6 +214,10 @@ application.
 ECMAScript Language Specification
 <https://tc39.github.io/ecma262/#sec-promise-objects>.
 
+There are a number of promise-based Perl modules.  For convinience,
+the same Git repository as this module contains L<Promised::Flow>,
+which abstracts common promise-based program control flows.
+
 =head1 AUTHOR
 
 Wakaba <wakaba@suikawiki.org>.

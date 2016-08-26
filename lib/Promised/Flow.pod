@@ -1,0 +1,113 @@
+=head1 NAME
+
+Promised::Flow - Promise-aware basic control flows
+
+=head1 SYNOPSIS
+
+  use Promised::Flow;
+  my $http = ...;
+  return promised_cleanup {
+    return $http->close;
+  } promised_for {
+    my $item = $_[0];
+    return Promise->resolve->then (sub {
+      return promised_timeout {
+        return $http->get (q<https://example.com/> . $item);
+      } 2;
+    })->then (sub {
+      return promised_sleep (0.5);
+    });
+  } [1, 2, 3, 4];
+
+=head1 DESCRIPTION
+
+The C<Promised::Flow> module exports a number of functions which
+supports commonly-used patterns of promise-based programming.
+
+=head1 FUNCTIONS
+
+Following functions are exported by default:
+
+=over 4
+
+=item $promise = promised_for { ... } [$item, $item, ...]
+
+With a code block and an array reference, run the code for each item
+in the array, in order.  The code can return a promise.  The next
+iteration is run after the promise of the previous iteration is
+resolved.
+
+It returns a promise which is resolved after the last iteration is
+done.
+
+If an iteration fails, the returned promise is rejected.  Any
+remaining iteration is skipped.
+
+=item $promise = promised_wait_until { ... } NAME => VALUE, ...
+
+With a code block and optional options specified as name/value pairs,
+run the code repeatedly until the code resolved with a true value.
+The code can return a promise.
+
+It returns a promise which is resolved after the resolution of the
+code with a true value.
+
+If the C<interval> option is specified, it is interpreted as a number
+of seconds (which does not have to be an integer) of interval between
+invocations of codes.  The default is C<1> (second).
+
+If the C<timeout> option is specified, the returned promise is
+rejected when the code never resolved with a true value within the
+number of seconds specified by the option (which does not have to be
+an integer).  Please note that any execution of the code at the time
+of timeout is not terminated.  The default is no timeout.
+
+=item $promise = promised_sleep ($seconds)
+
+Return a promise which is resolved after a time interval.  The
+argument must be a number in seconds, representing the interval.  The
+number does not have to be an integer.
+
+=item $promise = promised_timeout { ... } $seconds
+
+With a code block and a number in seconds, run a code with timeout.
+It returns a promise, which is resolved with the code's resolved value
+(note that the code can return a promise), if the code is resolved
+within the seconds of the timeout, or rejected otherwise.  The number
+does not have to be an integer.
+
+Please note that the running code is not terminated after the timeout.
+
+If the timeout is C<undef>, no timeout is set.
+
+=item $promise = promised_cleanup { ... } $promise
+
+With a code block and promise, run the code just after the promise is
+resolved or rejected.  The code can return a promise.  This can be
+used to finally run a cleanup code after the main operations.
+
+It returns a promise.  If both the input promise and the code are
+resolved, the returned promise is resolved with the intput promise's
+resolved value.  Otherwise, if both the input promies and the code are
+rejected, the returned promise is rejected with the code's rejected
+value.  Otherwise, the returned promise is rejected with the input
+promise's or the code's rejected value.
+
+=back
+
+=head1 DEPENDENCY
+
+The module requires Perl 5.8 or later, L<AnyEvent>, and L<Promise>.
+
+=head1 AUTHOR
+
+Wakaba <wakaba@suikawiki.org>.
+
+=head1 LICENSE
+
+Copyright 2016 Wakaba <wakaba@suikawiki.org>.
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut
