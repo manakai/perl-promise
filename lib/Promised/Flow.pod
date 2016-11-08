@@ -43,6 +43,20 @@ done.
 If an iteration fails, the returned promise is rejected.  Any
 remaining iteration is skipped.
 
+=item $promise = promised_map { ... } [$item, $item, ...]
+
+With a code block and an array reference, run the code for each item
+in the array, in order, and create a new array reference with the
+results of the code executions.  The code can return a promise which
+is to be resolved with the result.  The next iteration is run after
+the promise of the previous iteration is resolved.
+
+It returns a promise which is resolved with the new array reference
+after the last iteration is done.
+
+If an iteration fails, the returned promise is rejected.  Any
+remaining iteration is skipped.
+
 =item $promise = promised_wait_until { ... } NAME => VALUE, ...
 
 With a code block and optional options specified as name/value pairs,

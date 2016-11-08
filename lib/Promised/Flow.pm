@@ -77,6 +77,21 @@ sub promised_for (&$) {
   return $p->then (sub { return undef });
 } # promised_for
 
+push @EXPORT, qw(promised_map);
+sub promised_map (&$) {
+  my ($code, $list) = @_;
+  my $p = Promise->resolve;
+  my $new_list = [];
+  for my $item (@$list) {
+    $p = $p->then (sub {
+      return $code->($item);
+    })->then (sub {
+      push @$new_list, $_[0];
+    });
+  }
+  return $p->then (sub { return $new_list });
+} # promised_map
+
 push @EXPORT, qw(promised_wait_until);
 sub promised_wait_until (&;%) {
   my ($code, %args) = @_;
@@ -112,3 +127,12 @@ sub promised_wait_until (&;%) {
 } # promised_wait_until
 
 1;
+
+=head1 LICENSE
+
+Copyright 2016 Wakaba <wakaba@suikawiki.org>.
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut

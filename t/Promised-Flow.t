@@ -455,4 +455,51 @@ test {
   });
 } n => 2, name => 'promised_wait_until timeout';
 
+test {
+  my $c = shift;
+  my $i = 1;
+  (promised_map {
+    return Promise->resolve ($_[0])->then (sub { return $_[0] * 10 + $i++ });
+  } [1, 2, 3])->then (sub {
+    my $items = $_[0];
+    test {
+      is 0+@$items, 3;
+      is $items->[0], 11;
+      is $items->[1], 22;
+      is $items->[2], 33;
+      is $i, 4;
+    } $c;
+    done $c;
+    undef $c;
+  });
+} n => 5, name => 'promised_map';
+
+test {
+  my $c = shift;
+  my $i = 1;
+  (promised_map {
+    die "error in map\n" if $_[0] == 3;
+    return Promise->resolve ($_[0])->then (sub { return $_[0] * 10 + $i++ });
+  } [1, 2, 3])->then (sub {
+    test { ok 0 } $c;
+  }, sub {
+    my $error = $_[0];
+    test {
+      is $error, "error in map\n";
+      is $i, 3;
+    } $c;
+    done $c;
+    undef $c;
+  });
+} n => 2, name => 'promised_map';
+
 run_tests;
+
+=head1 LICENSE
+
+Copyright 2016 Wakaba <wakaba@suikawiki.org>.
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut
