@@ -333,14 +333,14 @@ sub DESTROY ($) {
   if (not $_[0]->{catch_registered} and
       defined $_[0]->{promise_state} and
       $_[0]->{promise_state} eq 'rejected') {
-    my $msg = "Uncaught rejection: @{[defined $_[0]->{promise_result} ? $_[0]->{promise_result} : '(undef)']}";
+    my $msg = "$$: Uncaught rejection: @{[defined $_[0]->{promise_result} ? $_[0]->{promise_result} : '(undef)']}";
     $msg .= " for " . $_[0]->debug_info . "\n" unless $msg =~ /\n$/;
     warn $msg;
   }
   local $@;
   eval { die };
   if ($@ =~ /during global destruction/) {
-    warn "Reference to " . $_[0]->debug_info . " is not discarded before global destruction\n";
+    warn "$$: Reference to " . $_[0]->debug_info . " is not discarded before global destruction\n";
   }
 } # DESTROY
 
@@ -348,7 +348,7 @@ sub DESTROY ($) {
 
 =head1 LICENSE
 
-Copyright 2014-2015 Wakaba <wakaba@suikawiki.org>.
+Copyright 2014-2016 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
