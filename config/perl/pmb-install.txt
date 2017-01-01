@@ -3,4 +3,4 @@ Carp~1.38
 Path::Tiny~0.098
 Scalar::Util~1.47
 Term::ANSIColor~4.06
-Test::More~1.302073
+Test::Builder~1.302073
