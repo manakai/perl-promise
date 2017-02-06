@@ -126,11 +126,18 @@ sub promised_wait_until (&;%) {
   } $args{timeout};
 } # promised_wait_until
 
+push @EXPORT, qw(promised_cv);
+sub promised_cv () {
+  my ($send, $croak);
+  my $receive = Promise->new (sub { ($send, $croak) = @_ });
+  return ($receive, $send, $croak);
+} # promised_cv
+
 1;
 
 =head1 LICENSE
 
-Copyright 2016 Wakaba <wakaba@suikawiki.org>.
+Copyright 2016-2017 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

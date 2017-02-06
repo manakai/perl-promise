@@ -493,11 +493,72 @@ test {
   });
 } n => 2, name => 'promised_map';
 
+test {
+  my $c = shift;
+  my ($r, $s, $cr) = promised_cv;
+  isa_ok $r, 'Promise';
+  Promise->resolve->then (sub { $s->(123); $cr->(4) });
+  $r->then (sub {
+    my $v = $_[0];
+    test {
+      is $v, 123;
+    } $c;
+  }, sub {
+    test {
+      ok 0;
+    } $c;
+  })->then (sub {
+    done $c;
+    undef $c;
+  });
+} n => 2, name => 'promised_cv sent';
+
+test {
+  my $c = shift;
+  my ($r, $s, $cr) = promised_cv;
+  isa_ok $r, 'Promise';
+  $s->(123);
+  $cr->(4);
+  $r->then (sub {
+    my $v = $_[0];
+    test {
+      is $v, 123;
+    } $c;
+  }, sub {
+    test {
+      ok 0;
+    } $c;
+  })->then (sub {
+    done $c;
+    undef $c;
+  });
+} n => 2, name => 'promised_cv sent';
+
+test {
+  my $c = shift;
+  my ($r, $s, $cr) = promised_cv;
+  isa_ok $r, 'Promise';
+  Promise->resolve->then (sub { $cr->(4); $s->(123) });
+  $r->then (sub {
+    test {
+      ok 0;
+    } $c;
+  }, sub {
+    my $v = $_[0];
+    test {
+      is $v, 4;
+    } $c;
+  })->then (sub {
+    done $c;
+    undef $c;
+  });
+} n => 2, name => 'promised_cv croaked';
+
 run_tests;
 
 =head1 LICENSE
 
-Copyright 2016 Wakaba <wakaba@suikawiki.org>.
+Copyright 2016-2017 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

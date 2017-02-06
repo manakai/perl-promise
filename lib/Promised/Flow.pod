@@ -107,6 +107,25 @@ rejected, the returned promise is rejected with the code's rejected
 value.  Otherwise, the returned promise is rejected with the input
 promise's or the code's rejected value.
 
+=item ($receive, $send, $croak) = promised_cv
+
+Create a one-time unidirectional pipe.
+
+It returns three values.  The first value is a promise.  The second
+value is a function, which accepts an argument.  When the second value
+is invoked, the promise is resolved with the argument (i.e. the
+argument can be a value or a promise to be resolved).  The third value
+is a function, which accepts an argument.  When the third value is
+invoked, the promise is rejected with the argument.
+
+In other words, the second and the third return values are the
+arguments to the function specified as the argument to the L<Promise>
+constructor when the first return value is constructed.
+
+This is essentially equivalent to L<AnyEvent::CondVar>, except for the
+API.  The second and the third values correspond to the C<send> and
+the C<croak> methods of I<$cv>.
+
 =back
 
 =head1 DEPENDENCY
@@ -119,7 +138,7 @@ Wakaba <wakaba@suikawiki.org>.
 
 =head1 LICENSE
 
-Copyright 2016 Wakaba <wakaba@suikawiki.org>.
+Copyright 2016-2017 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
