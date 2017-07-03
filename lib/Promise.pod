@@ -158,11 +158,11 @@ $onrejected) >>.
 
 =item $cv = $p->to_cv
 
-Return a new L<AnyEvent::CondVar> object.  When the promise is
-fulfilled, the result value is sent to the condvar (i.e. C<< $cv->recv
+Create and return an L<AnyEvent::CondVar> object.  When the promise is
+fulfilled, the condvar receives the result value (i.e. C<< $cv->recv
 >> returns the value).  When the promise is rejected, the condvar is
-croaked with the thrown value (o.e. C<< $cv->recv >> croaks and C<$@>
-is set to the thrown exception).
+croaked with the thrown value (i.e. C<< $cv->recv >> croaks with the
+value).  Apparently this method requires L<AnyEvent>.
 
 =item $p->manakai_set_handled
 
@@ -171,7 +171,7 @@ without creating a new promise or enqueueing handlers, supressing
 "uncaught rejection" warning.  (In the ECMAScript specification terms,
 this method sets the [[PromiseIsHandled]] internal slot to true.)
 
-=item $string = $p2->debug_info
+=item $string = $p->debug_info
 
 Return a short character string that might be useful for debugging.
 

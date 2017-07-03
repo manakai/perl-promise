@@ -2,7 +2,7 @@ package Promise;
 use strict;
 use warnings;
 use warnings FATAL => 'uninitialized';
-our $VERSION = '3.0';
+our $VERSION = '4.0';
 use Carp;
 
 sub _get_caller () {
