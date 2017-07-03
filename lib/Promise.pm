@@ -133,14 +133,6 @@ sub _new_promise_capability ($) {
   return $promise_capability;
 } # _new_promise_capability
 
-# XXX
-sub is_promise ($) {
-  return 0 unless defined $_[0] and ref $_[0];
-  return 0 if ref $_[0] eq 'HASH';
-  local $@;
-  return defined eval { $_[0]->{promise_state} };
-} # is_promise
-
 sub new ($$) {
   my ($class, $executor) = @_;
   die _type_error ('The executor is not a code reference')
@@ -236,7 +228,7 @@ sub reject ($$) {
 } # reject
 
 sub resolve ($$) {
-  return $_[1] if is_promise $_[1] and ref $_[1] eq $_[0];
+  return $_[1] if defined $_[1] and ref $_[1] eq $_[0]; ## IsPromise and constructor
   my $promise_capability = _new_promise_capability $_[0]; # or throw
   $promise_capability->{resolve}->($_[1]);
   return $promise_capability->{promise};
@@ -248,8 +240,6 @@ sub catch ($$) {
 
 sub then ($$$) {
   my ($promise, $onfulfilled, $onrejected) = @_;
-  die _type_error ('The context object is not a promise')
-      unless is_promise $promise;
   my $promise_capability = _new_promise_capability ref $promise; # or throw
 
   ## PerformPromiseThen

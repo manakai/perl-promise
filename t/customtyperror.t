@@ -155,14 +155,13 @@ test {
 
 test {
   my $c = shift;
-  dies_ok {
+  eval {
     test::Promise->can ('then')->({}, sub {});
   };
-  isa_ok $@, 'test::TypeError';
-  is $@->{message}, 'The context object is not a promise';
-  like $@->{location}, qr{ at \Q@{[__FILE__]}\E line \Q@{[__LINE__-4]}\E};
+  ok not ref $@;
+  like $@, qr{Can't locate object method "new" via package "HASH"}; # location is within Promise.pm
   done $c;
-} n => 4, name => 'then not promise';
+} n => 2, name => 'then not promise';
 
 run_tests;
 
