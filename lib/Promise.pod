@@ -26,19 +26,27 @@ Promise - A promise implementation
 
 =head1 DESCRIPTION
 
-The C<Promise> module defines a promise class, which provides an API
-similar to JavaScript C<Promise> objects.
+The C<Promise> module defines a promise class which exposes methods
+similar to those of the JavaScript C<Promise> class.
 
-A promise is to be fulfilled or rejected.  When fulfilled with a
-result value, any fulfilled callback(s) registered with the promise
-are invoked with the value.  When rejected with a result value, any
-rejected callback(s) registered with the promise are invoked with the
-value.
+A promise is either to be fulfilled or to be rejected.  When the
+promise is B<fulfilled> with a value, any fulfilled callback
+registered with the promise is invoked with the value.  When the
+promise is B<rejected> with a value, any rejected callback registered
+with the promise is invoked with the value.  Any number of fulfilled
+and rejected callbacks can be registered.  Callbacks can be registered
+anytime, before or after fulfilling or rejecting of the promise.  Each
+callback is invoked at most once for the promise.
 
-A promise can be resolved.  When resolved with another promise, the
-original promise is fulfilled or rejected when the other promise is
-fulfilled or rejected.  When resolved with a non-promise value, the
-promise is fulfilled with the value.
+A promise can be B<resolved>.  When a promise is resolved with another
+promise, the original promise is fulfilled or rejected once the other
+promise is fulfilled or rejected, with the same value.  When a promise
+is resolved with a non-promise value, the promise is fulfilled with
+the value.
+
+For the purpose of resolution, any Perl object with the C<then> method
+defined is a promise.  That is, promise objects implementing other
+Perl classes can be used in mixture with these L<Promise> objects.
 
 =head1 METHODS
 
@@ -62,6 +70,17 @@ To reject the promise created, the second argument (C<$_[1]>), which
 is a code reference, must be invoked.  If an argument is specified to
 the code, it is used to reject the promise.  Otherwise, C<undef> is
 used to reject the promise.
+
+=item $p = Promise->resolve ($x)
+
+Return a promise which is resolved with the value specified as the
+argument.  If the argument is a promise, that promise is returned as
+is.  Otherwise, a new promise is created.
+
+=item $p = Promise->reject ($r)
+
+Create and return a new promise which is rejected with the value
+specified as the argument.
 
 =item $p = Promise->all ([$p1, $p2, ...])
 
@@ -89,16 +108,6 @@ evaluated as if it were an array reference).
 The promise is to be fulfilled or rejected when any of the promises is
 fulfilled or rejected, with the value of the fulfilled or rejected
 promise.
-
-=item $p = Promise->reject ($r)
-
-Create a promise, which is rejected by the value specified as the
-argument.
-
-=item $p = Promise->resolve ($x)
-
-Create a promise, which is resolved with the value specified as the
-argument.  If the argument is a promise, it is returned unchanged.
 
 =item $p = Promise->from_cv ($cv)
 

@@ -84,11 +84,53 @@ test {
   });
 } n => 1, name => 'reject arg is promise';
 
+test {
+  my $c = shift;
+  my $v1 = {};
+  Promise->reject ($v1)->catch (sub {
+    my $v = $_[0];
+    test {
+      is $v, $v1;
+    } $c;
+    done $c;
+    undef $c;
+  });
+} n => 1;
+
+test {
+  my $c = shift;
+  my $v1 = {};
+  for ($v1) {
+    Promise->reject ($_)->catch (sub {
+      my $v = $_[0];
+      test {
+        is $v, $v1;
+      } $c;
+      done $c;
+      undef $c;
+    });
+  }
+} n => 1, name => '$_';
+
+test {
+  my $c = shift;
+  my $v1 = rand;
+  $v1 =~ /\A(.+)\z/;
+  Promise->reject ($1)->catch (sub {
+    my $v = $_[0];
+    test {
+      is $v, $v1;
+    } $c;
+    done $c;
+    undef $c;
+  });
+} n => 1, name => '$1';
+
 run_tests;
 
 =head1 LICENSE
 
-Copyright 2014 Wakaba <wakaba@suikawiki.org>.
+Copyright 2014-2017 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

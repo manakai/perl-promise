@@ -247,19 +247,15 @@ sub race ($$) {
 } # race
 
 sub reject ($$) {
-  my ($class, $r) = @_;
-  my $promise_capability = new_promise_capability $class; # or throw
-  $promise_capability->{reject}->($r);
+  my $promise_capability = new_promise_capability $_[0]; # or throw
+  $promise_capability->{reject}->($_[1]);
   return $promise_capability->{promise};
 } # reject
 
 sub resolve ($$) {
-  my ($class, $x) = @_;
-  if (is_promise $x) {
-    return $x if ref $x eq $class;
-  }
-  my $promise_capability = new_promise_capability $class; # or throw
-  $promise_capability->{resolve}->($x);
+  return $_[1] if is_promise $_[1] and ref $_[1] eq $_[0];
+  my $promise_capability = new_promise_capability $_[0]; # or throw
+  $promise_capability->{resolve}->($_[1]);
   return $promise_capability->{promise};
 } # resolve
 
@@ -274,9 +270,9 @@ sub then ($$$) {
   my $promise_capability = new_promise_capability ref $promise; # or throw
 
   ## PerformPromiseThen
-  $onfulfilled = 'identity'
+  $onfulfilled = 'identity' # XXX
       if not defined $onfulfilled or not ref $onfulfilled eq 'CODE';
-  $onrejected = 'thrower'
+  $onrejected = 'thrower' # XXX
       if not defined $onrejected or not ref $onrejected eq 'CODE';
   my $fulfill_reaction = {capability => $promise_capability,
                           handler => $onfulfilled};
@@ -290,13 +286,15 @@ sub then ($$$) {
         if defined $promise->{promise_reject_reactions} and
            ref $promise->{promise_reject_reactions} eq 'ARRAY';
   } elsif ($promise->{promise_state} eq 'fulfilled') {
+    # XXX
     enqueue_promise_reaction_job
         $fulfill_reaction, $promise->{promise_result}, ref $promise;
   } elsif ($promise->{promise_state} eq 'rejected') {
+    # XXX
     enqueue_promise_reaction_job
         $reject_reaction, $promise->{promise_result}, ref $promise;
   }
-  $promise->{catch_registered} = 1;
+  $promise->{catch_registered} = 1; # XXX
   return $promise_capability->{promise};
 } # then
 

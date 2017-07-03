@@ -179,11 +179,57 @@ test {
   });
 } n => 4, name => 'resolve promise-subclass ng';
 
+test {
+  my $c = shift;
+  my $v1 = {};
+  for ($v1) {
+    Promise->resolve ($_)->then (sub {
+      my $v = $_[0];
+      test {
+        is $v, $v1;
+      } $c;
+      done $c;
+      undef $c;
+    });
+  }
+} n => 1, name => '$_';
+
+test {
+  my $c = shift;
+  my $v1 = rand;
+  $v1 =~ /\A(.+)\z/;
+  Promise->resolve ($1)->then (sub {
+    my $v = $_[0];
+    test {
+      is $v, $v1;
+    } $c;
+    done $c;
+    undef $c;
+  });
+} n => 1, name => '$1';
+
+test {
+  my $c = shift;
+  my $v1 = "abc";
+  Promise->resolve ($v1)->then (sub {
+    my $v = $_[0];
+    test {
+      is $v, "abc";
+    } $c;
+    $_[0] .= "d";
+    test {
+      is $v1, "abc";
+    } $c;
+    done $c;
+    undef $c;
+  });
+} n => 2, name => 'string is copied';
+
 run_tests;
 
 =head1 LICENSE
 
-Copyright 2014 Wakaba <wakaba@suikawiki.org>.
+Copyright 2014-2017 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
