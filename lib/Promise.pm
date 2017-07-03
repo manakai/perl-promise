@@ -22,6 +22,11 @@ $Promise::Enqueue = sub ($$) {
 };
 sub _enqueue (&) { $Promise::Enqueue->(undef, $_[0]) }
 
+$Promise::RejectionTrackerReject = sub ($) { };
+$Promise::RejectionTrackerHandle = sub ($) { };
+sub _rejection_tracker_reject ($) { $Promise::RejectionTrackerReject->(@_) }
+sub _rejection_tracker_handle ($) { $Promise::RejectionTrackerHandle->(@_) }
+
 sub _enqueue_promise_reaction_job ($$) {
   my ($reaction, $argument) = @_;
   _enqueue {
@@ -73,7 +78,7 @@ sub _reject_promise ($$) {
   $promise->{promise_result} = $_[1];
   delete $promise->{promise_fulfill_reactions};
   $promise->{promise_state} = 'rejected';
-  # XXX handled
+  _rejection_tracker_reject $promise unless $promise->{promise_is_handled};
 
   ## TriggerPromiseReactions
   _enqueue_promise_reaction_job $_, $_[1] for @$reactions;
@@ -141,7 +146,7 @@ sub new ($$) {
   $promise->{promise_state} = 'pending';
   $promise->{promise_fulfill_reactions} = [];
   $promise->{promise_reject_reactions} = [];
-  #XXX $promise->{promise_is_handled} = 0;
+  #$promise->{promise_is_handled} = 0;
   my $resolving_functions = _create_resolving_functions $promise;
   {
     local $@;
@@ -263,9 +268,11 @@ sub then ($$$) {
   } elsif ($promise->{promise_state} eq 'fulfilled') {
     _enqueue_promise_reaction_job $fulfill_reaction, $promise->{promise_result};
   } elsif ($promise->{promise_state} eq 'rejected') {
-    _enqueue_promise_reaction_job $reject_reaction, $promise->{promise_result};
+    my $result = $promise->{promise_result};
+    _rejection_tracker_handle $promise unless $promise->{promise_is_handled};
+    _enqueue_promise_reaction_job $reject_reaction, $result;
   }
-  $promise->{catch_registered} = 1; # XXX
+  $promise->{promise_is_handled} = 1;
   return $promise_capability->{promise};
 } # then
 
@@ -304,7 +311,7 @@ sub debug_info ($) {
 } # debug_info
 
 sub DESTROY ($) {
-  if (not $_[0]->{catch_registered} and
+  if (not $_[0]->{promise_is_handled} and
       defined $_[0]->{promise_state} and
       $_[0]->{promise_state} eq 'rejected') {
     my $msg = "$$: Uncaught rejection: @{[defined $_[0]->{promise_result} ? $_[0]->{promise_result} : '(undef)']}";
