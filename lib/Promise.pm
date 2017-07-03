@@ -53,30 +53,36 @@ sub enqueue_promise_resolve_thenable_job ($$$$) {
   });
 } # enqueue_promise_resolve_thenable_job
 
-sub trigger_promise_reactions ($$$) {
-  enqueue_promise_reaction_job $_, $_[1], $_[2] for @{$_[0] or []};
-  return undef;
-} # trigger_promise_reactions
-
-sub fulfill_promise ($$) {
+sub _fulfill_promise ($$) {
   my $promise = $_[0];
-  $promise->{promise_state} = 'fulfilled';
+  my $reactions = delete $promise->{promise_fulfill_reactions};
+  $promise->{promise_result} = $_[1];
   delete $promise->{promise_reject_reactions};
-  return trigger_promise_reactions
-      delete $promise->{promise_fulfill_reactions},
-      $promise->{promise_result} = $_[1],
-      ref $promise;
-} # fulfill_promise
+  $promise->{promise_state} = 'fulfilled';
 
-sub reject_promise ($$) {
+  ## TriggerPromiseReactions
+  for (@$reactions) {
+    enqueue_promise_reaction_job $_, $_[1], ref $promise;
+  }
+
+  return undef;
+} # _fulfill_promise
+
+sub _reject_promise ($$) {
   my $promise = $_[0];
-  $promise->{promise_state} = 'rejected';
+  my $reactions = delete $promise->{promise_reject_reactions};
+  $promise->{promise_result} = $_[1];
   delete $promise->{promise_fulfill_reactions};
-  return trigger_promise_reactions
-      delete $promise->{promise_reject_reactions},
-      $promise->{promise_result} = $_[1],
-      ref $promise;
-} # reject_promise
+  $promise->{promise_state} = 'rejected';
+  # XXX handled
+
+  ## TriggerPromiseReactions
+  for (@$reactions) {
+    enqueue_promise_reaction_job $_, $_[1], ref $promise;
+  }
+
+  return undef;
+} # _reject_promise
 
 sub create_resolving_functions ($$) {
   my ($promise, $class) = @_; # XXX
@@ -87,15 +93,15 @@ sub create_resolving_functions ($$) {
     $already_resolved = 1;
     if (defined $resolution and $resolution eq $promise) { # SameValue
       my $self_resolution_error = $class->_type_error ('SelfResolutionError');
-      return reject_promise $promise, $self_resolution_error;
+      return _reject_promise $promise, $self_resolution_error;
     }
     if (not defined $resolution or not ref $resolution) {
-      return fulfill_promise $promise, $resolution;
+      return _fulfill_promise $promise, $resolution;
     }
     my $then = eval { UNIVERSAL::can ($resolution, 'then') && $resolution->can ('then') };
-    return reject_promise $promise, $@ if $@;
+    return _reject_promise $promise, $@ if $@;
     unless (defined $then and ref $then eq 'CODE') {
-      return fulfill_promise $promise, $resolution;
+      return _fulfill_promise $promise, $resolution;
     }
     enqueue_promise_resolve_thenable_job $promise, $resolution, $then, $class;
     return undef;
@@ -104,7 +110,7 @@ sub create_resolving_functions ($$) {
     my ($reason) = @_;
     return undef if $already_resolved;
     $already_resolved = 1;
-    return reject_promise $promise, $reason;
+    return _reject_promise $promise, $reason;
   };
   return {resolve => $resolve, reject => $reject};
 } # create_resolving_functions
