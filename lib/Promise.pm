@@ -301,9 +301,12 @@ sub then ($$$) {
 sub from_cv ($$) {
   my ($class, $cv) = @_;
   return $class->new (sub {
-    my $cb = $_[0];
+    my ($resolve, $reject) = @_;
     $cv->cb (sub {
-      $cb->($_[0]->recv);
+      eval {
+        $resolve->($_[0]->recv);
+      };
+      $reject->($@) if $@;
     });
   });
 } # from_cv
@@ -348,7 +351,7 @@ sub DESTROY ($) {
 
 =head1 LICENSE
 
-Copyright 2014-2016 Wakaba <wakaba@suikawiki.org>.
+Copyright 2014-2017 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

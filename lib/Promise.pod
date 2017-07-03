@@ -103,10 +103,16 @@ argument.  If the argument is a promise, it is returned unchanged.
 =item $p = Promise->from_cv ($cv)
 
 Create a promise, which is resolved with the value received by the
-condvar specified as the argument.  The argument must be an object
-with the C<cb> method.  The argument is typically an
-L<AnyEvent::CondVar> object, though any object compatible with
-L<AnyEvent::CondVar> API can be used.
+condvar specified as the argument.
+
+The argument is typically an L<AnyEvent::CondVar> object, though any
+object compatible with L<AnyEvent::CondVar> API can be used.  The
+argument must be an object with the C<cb> method with a code reference
+argument, which is to be invoked with an object with C<recv> method.
+If the C<recv> method returns a value (i.e. C<< $cv->send >> is
+invoked), the promise is resolved with the value.  If the C<recv>
+method throws (i.e. C<< $cv->croak >> is invoked), the promise is
+rejected with the exception.
 
 =back
 
@@ -224,7 +230,7 @@ Wakaba <wakaba@suikawiki.org>.
 
 =head1 LICENSE
 
-Copyright 2014-2015 Wakaba <wakaba@suikawiki.org>.
+Copyright 2014-2017 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -43,11 +43,60 @@ test {
   is $invoked, 0;
 } n => 3, name => 'from_cv promise';
 
+test {
+  my $c = shift;
+
+  my $v1 = {};
+  my $cv = AE::cv;
+  $cv->croak ($v1);
+
+  my $p = Promise->from_cv ($cv);
+  isa_ok $p, 'Promise';
+  $p->then (sub {
+    test {
+      ok 0;
+    } $c;
+  }, sub {
+    my $x = $_[0];
+    test {
+      is $x, $v1;
+    } $c;
+  })->then (sub {
+    done $c;
+    undef $c;
+  });
+} n => 2, name => '$cv->croak then from_cv';
+
+test {
+  my $c = shift;
+
+  my $v1 = {};
+  my $cv = AE::cv;
+
+  my $p = Promise->from_cv ($cv);
+  isa_ok $p, 'Promise';
+  $p->then (sub {
+    test {
+      ok 0;
+    } $c;
+  }, sub {
+    my $x = $_[0];
+    test {
+      is $x, $v1, 'got croaked value';
+    } $c;
+  })->then (sub {
+    done $c;
+    undef $c;
+  });
+
+  $cv->croak ($v1);
+} n => 2, name => 'from_cv then $cv->croak';
+
 run_tests;
 
 =head1 LICENSE
 
-Copyright 2014 Wakaba <wakaba@suikawiki.org>.
+Copyright 2014-2017 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
