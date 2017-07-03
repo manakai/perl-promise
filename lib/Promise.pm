@@ -175,10 +175,11 @@ sub all ($$) {
   my ($class, $iterable) = @_;
   my $promise_capability = new_promise_capability $class; # or throw
   my $iterator = [eval { @$iterable }];
-  if ($@) { # IfAbruptRejectPromise
+  if ($@) { ## IfAbruptRejectPromise
     $promise_capability->{reject}->($@);
     return $promise_capability->{promise};
   }
+  ## PerformPromiseAll
   my $values = [];
   my $remaining_elements_count = 1;
   my $index = 0;
@@ -191,13 +192,13 @@ sub all ($$) {
       return $promise_capability->{promise};
     }
     my $next_promise = eval { $class->resolve ($iterator->[$index]) };
-    if ($@) { # IfAbruptRejectPromise
+    if ($@) { ## IfAbruptRejectPromise
       $promise_capability->{reject}->($@);
       return $promise_capability->{promise};
     }
     my $already_called = 0;
     my $resolve_element_index = $index;
-    my $resolve_element = sub ($) { # Promise.all resolve element function
+    my $resolve_element = sub ($) { ## Promise.all resolve element function
       return undef if $already_called;
       $already_called = 1;
       $values->[$resolve_element_index] = $_[0];
@@ -209,7 +210,7 @@ sub all ($$) {
     };
     $remaining_elements_count++;
     eval { $next_promise->then ($resolve_element, $promise_capability->{reject}) };
-    if ($@) { # IfAbruptRejectPromise
+    if ($@) { ## IfAbruptRejectPromise
       $promise_capability->{reject}->($@);
       return $promise_capability->{promise};
     }
@@ -222,28 +223,22 @@ sub race ($$) {
   my ($class, $iterable) = @_;
   my $promise_capability = new_promise_capability $class; # or throw
   my $iterator = [eval { @$iterable }];
-  if ($@) { # IfAbruptRejectPromise
+  if ($@) { ## IfAbruptRejectPromise
     $promise_capability->{reject}->($@);
     return $promise_capability->{promise};
   }
-  my $index = 0;
-  {
-    unless ($index <= $#$iterator) {
-      return $promise_capability->{promise};
-    }
-    my $next_promise = eval { $class->resolve ($iterator->[$index]) };
-    if ($@) { # IfAbruptRejectPromise
+  ## PerformPromiseRace
+  for my $value (@$iterator) {
+    eval {
+      my $promise = $class->resolve ($value);
+      $promise->then ($promise_capability->{resolve}, $promise_capability->{reject});
+    };
+    if ($@) { ## IfAbruptRejectPromise
       $promise_capability->{reject}->($@);
       return $promise_capability->{promise};
     }
-    eval { $next_promise->then ($promise_capability->{resolve}, $promise_capability->{reject}) };
-    if ($@) { # IfAbruptRejectPromise
-      $promise_capability->{reject}->($@);
-      return $promise_capability->{promise};
-    }
-    $index++;
-    redo;
-  }
+  } # $value
+  return $promise_capability->{promise};
 } # race
 
 sub reject ($$) {
