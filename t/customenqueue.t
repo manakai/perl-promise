@@ -12,9 +12,9 @@ use Promise;
   package test::Promise;
   our @ISA = qw(Promise);
   our @QUEUE;
-  sub _enqueue ($$) {
+  $Promise::Enqueue = sub {
     push @QUEUE, $_[1];
-  } # _enqueue
+  };
 }
 
 test {

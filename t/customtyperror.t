@@ -13,9 +13,9 @@ use Promise;
   our @ISA = qw(Promise);
   use Carp;
 
-  sub _type_error ($$) {
+  $Promise::CreateTypeError = sub {
     return bless {message => $_[1], location => Carp::shortmess}, 'test::TypeError';
-  } # _type_error
+  };
 
   package test::TypeError;
   use overload '""' => sub { "test::TypeError: $_[0]->{message}" }, fallback => 1;
@@ -158,9 +158,9 @@ test {
   dies_ok {
     test::Promise->can ('then')->({}, sub {});
   };
-  ok not ref $@;
-  like $@, qr{^TypeError};
-  like $@, qr{ at \Q@{[__FILE__]}\E line \Q@{[__LINE__-4]}\E};
+  isa_ok $@, 'test::TypeError';
+  is $@->{message}, 'The context object is not a promise';
+  like $@->{location}, qr{ at \Q@{[__FILE__]}\E line \Q@{[__LINE__-4]}\E};
   done $c;
 } n => 4, name => 'then not promise';
 
