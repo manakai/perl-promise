@@ -51,10 +51,11 @@ test {
 {
   package test::PromiseWithNew1;
   our @ISA = qw(test::Promise);
-  sub _new {
-    my ($self, $executor) = @_;
-    $self->SUPER::_new ($executor);
+  sub new {
+    my ($class, $executor) = @_;
+    my $self = $class->SUPER::new ($executor);
     $executor->(sub { }, sub { });
+    return $self;
   }
 }
 test {
@@ -79,11 +80,12 @@ test {
 {
   package test::PromiseWithNew2;
   our @ISA = qw(test::Promise);
-  sub _new {
-    my ($self, $executor) = @_;
+  sub new {
+    my ($class, $executor) = @_;
     $executor->(undef, sub { });
     $executor->(sub { }, sub { });
-    $self->SUPER::_new ($executor);
+    my $self = $class->SUPER::new ($executor);
+    return $self;
   }
 }
 test {
@@ -108,9 +110,9 @@ test {
 {
   package test::PromiseWithNew3;
   our @ISA = qw(test::Promise);
-  sub _new {
-    my ($self, $executor) = @_;
-    return $self->SUPER::_new (sub { });
+  sub new {
+    my ($class, $executor) = @_;
+    return $class->SUPER::new (sub { });
   }
 }
 test {
@@ -135,9 +137,9 @@ test {
 {
   package test::PromiseWithNew4;
   our @ISA = qw(test::Promise);
-  sub _new {
-    my ($self, $executor) = @_;
-    return $self->SUPER::_new (sub { $executor->(sub {}, undef) });
+  sub new {
+    my ($class, $executor) = @_;
+    return $class->SUPER::new (sub { $executor->(sub {}, undef) });
   }
 }
 test {
@@ -166,7 +168,7 @@ run_tests;
 
 =head1 LICENSE
 
-Copyright 2014 Wakaba <wakaba@suikawiki.org>.
+Copyright 2014-2017 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

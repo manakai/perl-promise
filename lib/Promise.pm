@@ -75,7 +75,7 @@ sub reject_promise ($$) {
 } # reject_promise
 
 sub create_resolving_functions ($$) {
-  my ($promise, $class) = @_;
+  my ($promise, $class) = @_; # XXX
   my $already_resolved = 0;
   my $resolve = sub ($$) { ## promise resolve function
     my ($resolution) = @_;
@@ -105,11 +105,13 @@ sub create_resolving_functions ($$) {
   return {resolve => $resolve, reject => $reject};
 } # create_resolving_functions
 
-sub create_promise_capability_record ($$) {
-  my ($promise, $class) = @_;
+sub _new_promise_capability ($) {
+  my $class = $_[0];
+  my $promise_capability = {}; # promise, resolve, reject
+
+  ## GetCapabilitiesExecutor
   my $error_class = $class->can ('_type_error') ? $class : __PACKAGE__;
-  my $promise_capability = {promise => $promise};
-  my $executor = sub ($$$) { # GetCapabilitiesExecutor function
+  my $executor = sub ($$) {
     die $error_class->_type_error ('The resolver is already specified')
         if defined $promise_capability->{resolve};
     die $error_class->_type_error ('The reject handler is already specified')
@@ -118,7 +120,8 @@ sub create_promise_capability_record ($$) {
     $promise_capability->{reject} = $_[1];
     return undef;
   };
-  ($class->can ('_new') or sub { })->($promise, $executor);
+
+  $promise_capability->{promise} = $class->new ($executor); # or throw
   die $error_class->_type_error
       ('The executor is not invoked or the resolver is not specified')
       unless defined $promise_capability->{resolve} and
@@ -128,16 +131,9 @@ sub create_promise_capability_record ($$) {
       unless defined $promise_capability->{reject} and
              ref $promise_capability->{reject} eq 'CODE';
   return $promise_capability;
-} # create_promise_capability_record
+} # _new_promise_capability
 
-sub new_promise_capability ($) {
-  my $class = $_[0];
-  my $promise = bless {
-    new_caller => _get_caller,
-  }, $class; # CreateFromConstructor
-  return create_promise_capability_record $promise, $class;
-} # new_promise_capability
-
+# XXX
 sub is_promise ($) {
   return 0 unless defined $_[0] and ref $_[0];
   return 0 if ref $_[0] eq 'HASH';
@@ -145,35 +141,27 @@ sub is_promise ($) {
   return defined eval { $_[0]->{promise_state} };
 } # is_promise
 
-sub initialize_promise ($$$) {
-  my ($promise, $executor, $class) = @_;
+sub new ($$) {
+  my ($class, $executor) = @_;
+  die $class->_type_error ('The executor is not a code reference')
+      unless defined $executor and ref $executor eq 'CODE';
+  my $promise = bless {new_caller => _get_caller}, $class;
   $promise->{promise_state} = 'pending';
   $promise->{promise_fulfill_reactions} = [];
   $promise->{promise_reject_reactions} = [];
+  #XXX $promise->{promise_is_handled} = 0;
   my $resolving_functions = create_resolving_functions $promise, $class;
-  local $@;
-  eval { $executor->($resolving_functions->{resolve}, $resolving_functions->{reject}) };
-  $resolving_functions->{reject}->($@) if $@;
-  return $promise;
-} # initialize_promise
-
-sub new ($$) {
-  my ($class, $executor) = @_;
-  my $promise = bless {new_caller => _get_caller}, $class;
-  $promise->_new ($executor);
+  {
+    local $@;
+    eval { $executor->($resolving_functions->{resolve}, $resolving_functions->{reject}) };
+    $resolving_functions->{reject}->($@) if $@;
+  }
   return $promise;
 } # new
 
-sub _new ($) {
-  my ($promise, $executor) = @_;
-  die $promise->_type_error ('The executor is not a code reference')
-      unless ref $executor eq 'CODE';
-  return initialize_promise $promise, $executor, ref $promise;
-} # _new
-
 sub all ($$) {
   my ($class, $iterable) = @_;
-  my $promise_capability = new_promise_capability $class; # or throw
+  my $promise_capability = _new_promise_capability $class; # or throw
   my $iterator = [eval { @$iterable }];
   if ($@) { ## IfAbruptRejectPromise
     $promise_capability->{reject}->($@);
@@ -221,7 +209,7 @@ sub all ($$) {
 
 sub race ($$) {
   my ($class, $iterable) = @_;
-  my $promise_capability = new_promise_capability $class; # or throw
+  my $promise_capability = _new_promise_capability $class; # or throw
   my $iterator = [eval { @$iterable }];
   if ($@) { ## IfAbruptRejectPromise
     $promise_capability->{reject}->($@);
@@ -242,14 +230,14 @@ sub race ($$) {
 } # race
 
 sub reject ($$) {
-  my $promise_capability = new_promise_capability $_[0]; # or throw
+  my $promise_capability = _new_promise_capability $_[0]; # or throw
   $promise_capability->{reject}->($_[1]);
   return $promise_capability->{promise};
 } # reject
 
 sub resolve ($$) {
   return $_[1] if is_promise $_[1] and ref $_[1] eq $_[0];
-  my $promise_capability = new_promise_capability $_[0]; # or throw
+  my $promise_capability = _new_promise_capability $_[0]; # or throw
   $promise_capability->{resolve}->($_[1]);
   return $promise_capability->{promise};
 } # resolve
@@ -262,7 +250,7 @@ sub then ($$$) {
   my ($promise, $onfulfilled, $onrejected) = @_;
   die __PACKAGE__->_type_error ('The context object is not a promise')
       unless is_promise $promise;
-  my $promise_capability = new_promise_capability ref $promise; # or throw
+  my $promise_capability = _new_promise_capability ref $promise; # or throw
 
   ## PerformPromiseThen
   $onfulfilled = 'identity' # XXX

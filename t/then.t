@@ -451,14 +451,13 @@ test {
 
 test {
   my $c = shift;
-  dies_here_ok {
+  eval {
     Promise->can ('then')->((bless {promise_state => 'foo'}, 'foo'), sub {});
   };
   ok not ref $@;
-  like $@, qr{^TypeError};
-  like $@, qr{ at \Q@{[__FILE__]}\E line \Q@{[__LINE__-4]}\E};
+  like $@, qr{^Can't locate object method "new" via package "foo" at }; # location is within Promise.pm
   done $c;
-} n => 4, name => 'then promise-like';
+} n => 2, name => 'then promise-like';
 
 test {
   my $c = shift;
@@ -478,7 +477,7 @@ run_tests;
 
 =head1 LICENSE
 
-Copyright 2014 Wakaba <wakaba@suikawiki.org>.
+Copyright 2014-2017 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
