@@ -1,6 +1,6 @@
 =head1 NAME
 
-Promise - A promise implementation
+Promise - Promise for Perl
 
 =head1 SYNOPSIS
 
@@ -164,6 +164,13 @@ fulfilled, the result value is sent to the condvar (i.e. C<< $cv->recv
 croaked with the thrown value (o.e. C<< $cv->recv >> croaks and C<$@>
 is set to the thrown exception).
 
+=item $p->manakai_set_handled
+
+Mark the promise "handled", as if the C<then> method were invoked,
+without creating a new promise or enqueueing handlers, supressing
+"uncaught rejection" warning.  (In the ECMAScript specification terms,
+this method sets the [[PromiseIsHandled]] internal slot to true.)
+
 =item $string = $p2->debug_info
 
 Return a short character string that might be useful for debugging.
@@ -179,11 +186,10 @@ By default, the string containing a short description of the error is
 used when the JavaScript C<Promise> API would use a C<TypeError>.
 
 By setting C<$Promise::CreateTypeError> variable to a code reference,
-or by subclassing and overridding C<_type_error> method, any value can
-be used as an exception instead of the string.  The code or method is
-invoked with the short description as the first method argument
-(C<$_[1]>) and is expected to return a value that is to be used as an
-exception.  It is expected not to throw any exception.
+any value can be used as an exception instead of the string.  The code
+or method is invoked with the short description as the first method
+argument (C<$_[1]>) and is expected to return a value that is to be
+used as an exception.  It is expected not to throw any exception.
 
 =head1 EVENT LOOP
 
@@ -191,17 +197,16 @@ Fulfilled and rejected callbacks are expected to be invoked by queuing
 them to some kind of event scheduling mechanism.
 
 By default, this is implemented using L<AnyEvent>.  By setting
-C<$Promise::Enqueue> variable to a code reference, or by subclassing
-and overridding C<_enqueue> method, any event scheduling mechanism can
-be used instead.  The code or method is invoked with the code
-reference as the first method argument (C<$_[1]>).  It is expected not
-to throw any exception.  It is expected that the code reference is
-enqueued and to be invoked later.
+C<$Promise::Enqueue> variable to a code reference, any event
+scheduling mechanism can be used instead.  The code or method is
+invoked with the code reference as the first method argument
+(C<$_[1]>).  It is expected not to throw any exception.  It is
+expected that the code reference is enqueued and to be invoked later.
 
-If promises are used to write a standalone application, the condvar
-returned by the C<to_cv> method of the last promise can be used to
-wait for receiving, which effectively invokes the main loop of the
-application:
+If the L<AnyEvent> default is unchanged and promises are used to write
+a standalone application, the condvar returned by the C<to_cv> method
+of the last promise can be used to wait for receiving, which
+effectively invokes the main loop of the application:
 
   use MyPromisedApp;
   MyPromisedApp->some_process->then (sub {

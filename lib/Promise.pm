@@ -276,6 +276,10 @@ sub then ($$$) {
   return $promise_capability->{promise};
 } # then
 
+sub manakai_set_handled ($) {
+  $_[0]->{promise_is_handled} = 1;
+} # manakai_set_handled
+
 sub from_cv ($$) {
   my ($class, $cv) = @_;
   return $class->new (sub {
