@@ -25,15 +25,18 @@ sub _enqueue ($$) { $Promise::Enqueue->(@_) }
 sub enqueue_promise_reaction_job ($$$) {
   my ($reaction, $argument, $class) = @_;
   $class->_enqueue (sub {
+    ## PromiseReactionJob
     my $promise_capability = $reaction->{capability};
-    if (ref $reaction->{handler} eq 'CODE') {
+    if (defined $reaction->{handler}) {
       my $handler_result = eval { $reaction->{handler}->($argument) };
       return $promise_capability->{reject}->($@) if $@;
       return $promise_capability->{resolve}->($handler_result);
-    } elsif ($reaction->{handler} eq 'thrower') {
-      return $promise_capability->{reject}->($argument);
-    } else { # handler eq identity
-      return $promise_capability->{resolve}->($argument);
+    } else {
+      if ($reaction->{type} eq 'fulfill') {
+        return $promise_capability->{resolve}->($argument);
+      } else { # reject
+        return $promise_capability->{reject}->($argument);
+      }
     }
   });
 } # enqueue_promise_reaction_job
@@ -42,6 +45,7 @@ sub create_resolving_functions ($$);
 sub enqueue_promise_resolve_thenable_job ($$$$) {
   my ($promise_to_resolve, $thenable, $then, $class) = @_;
   $class->_enqueue (sub {
+    ## PromiseResolveThenableJob
     my $resolving_functions = create_resolving_functions $promise_to_resolve, $class;
     my $then_call_result = eval { $then->($thenable, $resolving_functions->{resolve}, $resolving_functions->{reject}) };
     return $resolving_functions->{reject}->($@) if $@;
@@ -253,13 +257,15 @@ sub then ($$$) {
   my $promise_capability = _new_promise_capability ref $promise; # or throw
 
   ## PerformPromiseThen
-  $onfulfilled = 'identity' # XXX
+  $onfulfilled = undef
       if not defined $onfulfilled or not ref $onfulfilled eq 'CODE';
-  $onrejected = 'thrower' # XXX
+  $onrejected = undef
       if not defined $onrejected or not ref $onrejected eq 'CODE';
-  my $fulfill_reaction = {capability => $promise_capability,
+  my $fulfill_reaction = {type => 'fulfill',
+                          capability => $promise_capability,
                           handler => $onfulfilled};
-  my $reject_reaction = {capability => $promise_capability,
+  my $reject_reaction = {type => 'reject',
+                         capability => $promise_capability,
                          handler => $onrejected};
   if ($promise->{promise_state} eq 'pending') {
     push @{$promise->{promise_fulfill_reactions}}, $fulfill_reaction
