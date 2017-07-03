@@ -5,6 +5,8 @@ CURL = curl
 GIT = git
 
 updatenightly: local/bin/pmbp.pl
+	$(CURL) -f -l https://gist.githubusercontent.com/wakaba/34a71d3137a52abb562d/raw/gistfile1.txt | sh
+	git add t_deps/modules
 	perl local/bin/pmbp.pl --update
 	$(GIT) add config
 
@@ -37,3 +39,5 @@ test-deps: deps
 
 test-main:
 	$(PROVE) t/*.t
+
+## License: Public Domain.
