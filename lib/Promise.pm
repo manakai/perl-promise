@@ -25,7 +25,7 @@ sub _enqueue ($$) { $Promise::Enqueue->(@_) }
 sub enqueue_promise_reaction_job ($$$) {
   my ($reaction, $argument, $class) = @_;
   $class->_enqueue (sub {
-    my $promise_capability = $reaction->{capabilities};
+    my $promise_capability = $reaction->{capability};
     if (ref $reaction->{handler} eq 'CODE') {
       my $handler_result = eval { $reaction->{handler}->($argument) };
       return $promise_capability->{reject}->($@) if $@;
@@ -271,14 +271,16 @@ sub then ($$$) {
   my ($promise, $onfulfilled, $onrejected) = @_;
   die __PACKAGE__->_type_error ('The context object is not a promise')
       unless is_promise $promise;
+  my $promise_capability = new_promise_capability ref $promise; # or throw
+
+  ## PerformPromiseThen
   $onfulfilled = 'identity'
       if not defined $onfulfilled or not ref $onfulfilled eq 'CODE';
   $onrejected = 'thrower'
       if not defined $onrejected or not ref $onrejected eq 'CODE';
-  my $promise_capability = new_promise_capability ref $promise; # or throw
-  my $fulfill_reaction = {capabilities => $promise_capability,
+  my $fulfill_reaction = {capability => $promise_capability,
                           handler => $onfulfilled};
-  my $reject_reaction = {capabilities => $promise_capability,
+  my $reject_reaction = {capability => $promise_capability,
                          handler => $onrejected};
   if ($promise->{promise_state} eq 'pending') {
     push @{$promise->{promise_fulfill_reactions}}, $fulfill_reaction
