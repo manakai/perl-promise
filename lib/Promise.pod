@@ -182,8 +182,12 @@ to methods with same name in JavaScript C<Promise> API.
 
 =head1 ERRORS
 
-By default, the string containing a short description of the error is
-used when the JavaScript C<Promise> API would use a C<TypeError>.
+By default, a simple object, which is to be stringified into a string
+containing a short description of the error with the location of the
+error (e.g. C<Something's wrong at path/to/file.pl line 12345.\n>), is
+used when the JavaScript C<Promise> API would use a C<TypeError>.  The
+object is implementing the Perl Error Object Interface Level 1
+<https://github.com/manakai/perl-web-dom/blob/master/lib/Web/DOM/Error.pod#error-object-api>.
 
 By setting C<$Promise::CreateTypeError> variable to a code reference,
 any value can be used as an exception instead of the string.  The code

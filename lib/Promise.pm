@@ -4,6 +4,7 @@ use warnings;
 use warnings FATAL => 'uninitialized';
 our $VERSION = '4.0';
 use Carp;
+push our @CARP_NOT, qw(Promise::TypeError);
 
 sub _get_caller () {
   return scalar Carp::caller_info
@@ -11,7 +12,11 @@ sub _get_caller () {
 } # _get_caller
 
 $Promise::CreateTypeError ||= sub ($$) {
-  return "TypeError: " . $_[1] . Carp::shortmess ();
+  require Promise::TypeError;
+  $Promise::CreateTypeError = sub ($$) {
+    return Promise::TypeError->new ($_[1]);
+  };
+  return $Promise::CreateTypeError->(@_);
 };
 sub _type_error ($) { $Promise::CreateTypeError->(undef, $_[0]) }
 
