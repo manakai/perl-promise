@@ -39,6 +39,7 @@ sub _enqueue_promise_reaction_job ($$) {
       my $file = $reaction->{caller}->[1];
       $file =~ s/[\x0D\x0A\x22]/_/g;
       my $handler_result = eval sprintf q{
+package Promise::_Dummy;
 #line %d "%s"
 $reaction->{handler}->($argument);
 }, $reaction->{caller}->[2], $file;

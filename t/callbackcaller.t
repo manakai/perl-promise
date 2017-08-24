@@ -129,6 +129,97 @@ test {
   });
 } n => 1, name => 'croak';
 
+test {
+  my $c = shift;
+  {
+    package Test::Hoge1;
+    use Carp;
+    sub foo {
+      croak "abc";
+    };
+  }
+  Promise->resolve->then (sub {
+    Test::Hoge1::foo ();
+  })->catch (sub {
+    my $error = $_[0];
+    test {
+      like $error, qr{^abc at \Q@{[__FILE__]}\E line @{[__LINE__-4]}};
+    } $c;
+    done $c;
+    undef $c;
+  });
+} n => 1, name => 'croak';
+
+test {
+  my $c = shift;
+  {
+    package Test::Hoge2;
+    sub foo {
+      Carp::croak "abc";
+    };
+  }
+  package Test::Hoge3;
+  Promise->resolve->then (sub {
+    Test::Hoge2::foo ();
+  })->catch (sub {
+    my $error = $_[0];
+    Test::X1::test {
+      Test::More::like $error, qr{^abc at \Q@{[__FILE__]}\E line @{[__LINE__-4]}};
+    } $c;
+    done $c;
+    undef $c;
+  });
+} n => 1, name => 'croak';
+
+test {
+  my $c = shift;
+  {
+    package Test::Hoge4;
+    sub foo {
+      Carp::croak "abc";
+    };
+  }
+  package Test::Hoge5;
+  our @CARP_NOT = qw(Test::Hoge4);
+  Promise->resolve->then (sub {
+    Test::Hoge4::foo ();
+  })->catch (sub {
+    my $error = $_[0];
+    Test::X1::test {
+      Test::More::like $error, qr{^abc at \Q@{[__FILE__]}\E line @{[__LINE__+4]}};
+    } $c;
+    done $c;
+    undef $c;
+  });
+} n => 1, name => 'croak';
+
+test {
+  my $c = shift;
+  {
+    package Test::Hoge6;
+    sub foo {
+      Carp::croak "abc";
+    };
+  }
+  {
+    package Test::Hoge7;
+    our @CARP_NOT = qw(Test::Hoge6 Promise);
+    sub bar {
+      return Promise->resolve->then (sub {
+        Test::Hoge6::foo ();
+      });
+    }
+  }
+  Test::Hoge7::bar ()->catch (sub {
+    my $error = $_[0];
+    Test::X1::test {
+      Test::More::like $error, qr{^abc at \Q@{[__FILE__]}\E line @{[__LINE__+4]}};
+    } $c;
+    done $c;
+    undef $c;
+  });
+} n => 1, name => 'croak';
+
 run_tests;
 
 =head1 LICENSE
