@@ -6,6 +6,7 @@ use lib glob path (__FILE__)->parent->parent->child ('t_deps/modules/*/lib');
 use Test::X1;
 use Test::More;
 use Test::Dies;
+use AnyEvent;
 use Promise;
 
 test {
@@ -75,11 +76,20 @@ test {
   done $c;
 } n => 1, name => 'catch';
 
+test {
+  my $c = shift;
+  my $cv = AE::cv;
+  my $p = Promise->from_cv ($cv);
+  is $p->debug_info, '{Promise: pending, created at '.__FILE__.' line '.(__LINE__-1).'}';
+  $cv->send;
+  done $c;
+} n => 1, name => 'from_cv';
+
 run_tests;
 
 =head1 LICENSE
 
-Copyright 2014 Wakaba <wakaba@suikawiki.org>.
+Copyright 2014-2017 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -2,14 +2,12 @@ package Promise;
 use strict;
 use warnings;
 use warnings FATAL => 'uninitialized';
-our $VERSION = '4.0';
+our $VERSION = '5.0';
 use Carp;
 push our @CARP_NOT, qw(Promise::TypeError);
 
-sub _get_caller () {
-  return scalar Carp::caller_info
-      (Carp::short_error_loc() || Carp::long_error_loc());
-} # _get_caller
+## Not public; using |our| such that |local| can be used.
+our $CallerLevel = 0;
 
 $Promise::CreateTypeError ||= sub ($$) {
   require Promise::TypeError;
@@ -136,6 +134,7 @@ sub _new_promise_capability ($) {
     return undef;
   };
 
+  local $CallerLevel = $CallerLevel + 2;
   $promise_capability->{promise} = $class->new ($executor); # or throw
   die _type_error
       ('The executor is not invoked or the resolver is not specified')
@@ -152,7 +151,7 @@ sub new ($$) {
   my ($class, $executor) = @_;
   die _type_error ('The executor is not a code reference')
       unless defined $executor and ref $executor eq 'CODE';
-  my $promise = bless {new_caller => _get_caller}, $class;
+  my $promise = bless {caller => [caller $CallerLevel]}, $class;
   $promise->{promise_state} = 'pending';
   $promise->{promise_fulfill_reactions} = [];
   $promise->{promise_reject_reactions} = [];
@@ -250,6 +249,7 @@ sub resolve ($$) {
 } # resolve
 
 sub catch ($$) {
+  local $CallerLevel = 1;
   return $_[0]->then (undef, $_[1]); # or throw
 } # catch
 
@@ -296,6 +296,7 @@ sub manakai_set_handled ($) {
 
 sub from_cv ($$) {
   my ($class, $cv) = @_;
+  local $CallerLevel = 1;
   return $class->new (sub {
     my ($resolve, $reject) = @_;
     $cv->cb (sub {
@@ -324,8 +325,8 @@ sub debug_info ($) {
   return sprintf '{%s: %s, created at %s line %s}',
       ref $self,
       $self->{promise_state},
-      $self->{new_caller}->{file},
-      $self->{new_caller}->{line};
+      $self->{caller}->[1],
+      $self->{caller}->[2];
 } # debug_info
 
 sub DESTROY ($) {
