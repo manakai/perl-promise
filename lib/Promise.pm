@@ -261,10 +261,20 @@ sub then ($$$) {
   my $caller = [caller ((sub { Carp::short_error_loc })->() - 1)];
 
   ## PerformPromiseThen
-  $onfulfilled = undef
-      if not defined $onfulfilled or not ref $onfulfilled eq 'CODE';
-  $onrejected = undef
-      if not defined $onrejected or not ref $onrejected eq 'CODE';
+  if (defined $onfulfilled and not ref $onfulfilled eq 'CODE') {
+    warn sprintf "Fulfilled callback is not a CODE (%s) at %s line %s\n",
+        $onfulfilled,
+        $caller->[1],
+        $caller->[2];
+    $onfulfilled = undef;
+  }
+  if (defined $onrejected and not ref $onrejected eq 'CODE') {
+    warn sprintf "Rejected callback is not a CODE (%s) at %s line %s\n",
+        $onrejected,
+        $caller->[1],
+        $caller->[2];
+    $onrejected = undef;
+  }
   my $fulfill_reaction = {type => 'fulfill',
                           capability => $promise_capability,
                           handler => $onfulfilled,
