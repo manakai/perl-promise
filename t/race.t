@@ -122,11 +122,28 @@ test {
   });
 } n => 1, name => 'race two promises, ok and ng';
 
+test {
+  my $c = shift;
+  my $x = {};
+  eval { die $x };
+  test {
+    is $@, $x;
+  } $c;
+  my $p = Promise->race ([1, 2]);
+  test {
+    is $@, $x;
+  } $c;
+  $p->then (sub {
+    done $c;
+    undef $c;
+  });
+} n => 2, name => '$@';
+
 run_tests;
 
 =head1 LICENSE
 
-Copyright 2014 Wakaba <wakaba@suikawiki.org>.
+Copyright 2017 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

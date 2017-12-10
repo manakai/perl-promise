@@ -170,6 +170,7 @@ sub new ($$) {
 sub all ($$) {
   my ($class, $iterable) = @_;
   my $promise_capability = _new_promise_capability $class; # or throw
+  local $@;
   my $iterator = [eval { @$iterable }];
   if ($@) { ## IfAbruptRejectPromise
     $promise_capability->{reject}->($@);
@@ -218,6 +219,7 @@ sub all ($$) {
 sub race ($$) {
   my ($class, $iterable) = @_;
   my $promise_capability = _new_promise_capability $class; # or throw
+  local $@;
   my $iterator = [eval { @$iterable }];
   if ($@) { ## IfAbruptRejectPromise
     $promise_capability->{reject}->($@);
