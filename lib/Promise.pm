@@ -105,6 +105,7 @@ sub _create_resolving_functions ($) {
         if defined $_[0] and $_[0] eq $promise; ## SameValue
     return _fulfill_promise $promise, $_[0]
         if not defined $_[0] or not ref $_[0];
+    local $@;
     my $then = eval { UNIVERSAL::can ($_[0], 'then') && $_[0]->can ('then') };
     return _reject_promise $promise, $@ if $@;
     return _fulfill_promise $promise, $_[0]
