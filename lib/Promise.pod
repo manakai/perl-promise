@@ -242,13 +242,15 @@ There are a number of promise-based Perl modules.  For convinience,
 the same Git repository as this module contains L<Promised::Flow>,
 which abstracts common promise-based program control flows.
 
+L<AbortController>, L<AbortSignal>.
+
 =head1 AUTHOR
 
 Wakaba <wakaba@suikawiki.org>.
 
 =head1 LICENSE
 
-Copyright 2014-2017 Wakaba <wakaba@suikawiki.org>.
+Copyright 2014-2018 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

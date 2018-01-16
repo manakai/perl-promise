@@ -76,23 +76,41 @@ number of seconds specified by the option (which does not have to be
 an integer).  Please note that any execution of the code at the time
 of timeout is not terminated.  The default is no timeout.
 
-=item $promise = promised_sleep ($seconds)
+=item $promise = promised_sleep ($seconds, signal => $signal)
 
 Return a promise which is resolved after a time interval.  The
 argument must be a number in seconds, representing the interval.  The
 number does not have to be an integer.
 
-=item $promise = promised_timeout { ... } $seconds
+Optionally, an L<AbortSignal> can be specified as C<< signal => $value
+>> key/value pair at the end of the arguments.  If a signal object is
+specified and the L<AbortController> of the signal object is aborted
+before the completion of the sleep, the promise is rejected with an
+exception whose C<name> method returns the string C<AbortError>
+without waiting for the time interval.
 
-With a code block and a number in seconds, run a code with timeout.
-It returns a promise, which is resolved with the code's resolved value
-(note that the code can return a promise), if the code is resolved
-within the seconds of the timeout, or rejected otherwise.  The number
-does not have to be an integer.
+=item $promise = promised_timeout { ... } $seconds, signal => $signal
 
-Please note that the running code is not terminated after the timeout.
+Run a code with timeout.  It returns a promise, which is resolved with
+the code's resolved value (note that the code can return a promise),
+if the code is resolved within the seconds of the timeout, or rejected
+otherwise.
 
-If the timeout is C<undef>, no timeout is set.
+The block (the first argument) must be the code.
+
+The second argument is the number representing the seconds before the
+timeout.  It does not have to be an integer.  If the timeout is
+C<undef>, no timeout is set.
+
+Optionally, an L<AbortSignal> can be specified as C<< signal => $value
+>> key/value pair at the end of the arguments.  If a signal object is
+specified and the L<AbortController> of the signal object is aborted
+before the timeout or the completion of the code, the promise is
+rejected with an exception whose C<name> method returns the string
+C<AbortError> without waiting for the timeout.
+
+Please note that the running code is not terminated after the timeout
+or aborting.
 
 =item $promise = promised_cleanup { ... } $promise
 
@@ -138,7 +156,7 @@ Wakaba <wakaba@suikawiki.org>.
 
 =head1 LICENSE
 
-Copyright 2016-2017 Wakaba <wakaba@suikawiki.org>.
+Copyright 2016-2018 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

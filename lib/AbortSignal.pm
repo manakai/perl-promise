@@ -3,6 +3,9 @@ use strict;
 use warnings;
 our $VERSION = '1.0';
 use AbortSignal;
+use Promise::AbortError;
+
+push our @CARP_NOT, qw(Promise::AbortError);
 
 ## DOM: isa EventTarget
 ## DOM: onabort
@@ -25,7 +28,13 @@ sub _signal_abort ($) {
   ## Abort algorithms for Perl [DOMPERL]
   my $cb = $signal->{abort_cb};
   if (defined $cb) {
-    eval { $cb->(); 1 } or warn "$@\n"; # XXX report exception
+    my $e = Promise::AbortError->new;
+    my $file = $e->file_name;
+    $file =~ s/[\x0D\x0A\x22]/_/g;
+    my $code = sprintf q{#line %d "%s"
+$cb->();
+1}, $e->line_number, $file;
+    eval $code or warn "$@\n"; # XXX report exception
     delete $signal->{abort_cb};
   }
 } # _signal_abort

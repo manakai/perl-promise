@@ -1,12 +1,14 @@
 package Promised::Flow;
 use strict;
 use warnings;
-our $VERSION = '1.0';
+our $VERSION = '2.0';
 use Carp;
 use AnyEvent;
 use Promise;
+use Promise::AbortError;
 
 our @EXPORT;
+push our @CARP_NOT, qw(Promise Promise::AbortError);
 
 sub import ($;@) {
   my $from_class = shift;
@@ -32,35 +34,72 @@ sub promised_cleanup (&$) {
 } # promised_cleanup
 
 push @EXPORT, qw(promised_sleep);
-sub promised_sleep ($) {
-  my $sec = $_[0];
+sub promised_sleep ($;%) {
+  my ($sec, %args) = @_;
+  my $aborted = sub { };
+  if (defined $args{signal}) {
+    if ($args{signal}->aborted) {
+      return Promise->reject (Promise::AbortError->new ('Aborted by signal'));
+    } else {
+      $args{signal}->manakai_onabort (sub {
+                                        warn Carp::longmess;
+        $aborted->();
+      });
+    }
+  }
   return Promise->new (sub {
-    my ($ok) = @_;
-    my $timer; $timer = AE::timer $sec, 0, sub {
-      $ok->();
+    my ($ok, $ng) = @_;
+    my $timer;
+    $aborted = sub {
       undef $timer;
+      $ng->(Promise::AbortError->new ('Aborted by signal'));
+      $aborted = $ok = $ng = sub { };
+    };
+    $timer = AE::timer $sec, 0, sub {
+      undef $timer;
+      $ok->();
+      $aborted = $ok = $ng = sub { };
     };
   });
 } # promised_sleep
 
 push @EXPORT, qw(promised_timeout);
-sub promised_timeout (&$) {
-  my ($code, $sec) = @_;
+sub promised_timeout (&$;%) {
+  my ($code, $sec, %args) = @_;
+  my $aborted = sub { };
+  if (defined $args{signal}) {
+    if ($args{signal}->aborted) {
+      return Promise->reject (Promise::AbortError->new ('Aborted by signal'));
+    } else {
+      $args{signal}->manakai_onabort (sub {
+        $aborted->();
+      });
+    }
+  }
   return Promise->resolve->then ($code) unless defined $sec;
   return Promise->new (sub {
     my ($ok, $ng) = @_;
+    my $to = Promise::AbortError->new ("Timeout ($sec s)");
     my $timer; $timer = AE::timer $sec, 0, sub {
-      $ng->("Timeout ($sec s)");
+      $ng->($to);
       undef $timer;
+      $aborted = $ok = $ng = sub { };
+    };
+    $aborted = sub {
+      undef $timer;
+      $ng->(Promise::AbortError->new ('Aborted by signal'));
+      $aborted = $ok = $ng = sub { };
     };
     Promise->resolve->then ($code)->then (sub {
       my $result = $_[0];
       undef $timer;
       $ok->($result);
+      $aborted = $ok = $ng = sub { };
     }, sub {
       my $error = $_[0];
       undef $timer;
       $ng->($error);
+      $aborted = $ok = $ng = sub { };
     });
   });
 } # promised_timeout
@@ -137,7 +176,7 @@ sub promised_cv () {
 
 =head1 LICENSE
 
-Copyright 2016-2017 Wakaba <wakaba@suikawiki.org>.
+Copyright 2016-2018 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

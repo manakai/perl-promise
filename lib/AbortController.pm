@@ -4,6 +4,8 @@ use warnings;
 our $VERSION = '1.0';
 use AbortSignal;
 
+push our @CARP_NOT, qw(AbortSignal);
+
 sub new ($) {
   return bless {
     signal => (bless {}, 'AbortSignal'),
