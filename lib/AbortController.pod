@@ -1,0 +1,77 @@
+=head1 NAME
+
+AbortController - DOM AbortController for Perl
+
+=head1 SYNOPSIS
+
+  use AbortController;
+  
+  $ac = AbortController->new;
+  operation ({
+    signal => $ac->signal,
+  })->catch (sub {
+    my $e = shift;
+    if (UNIVERSAL::can ($e, 'name') and $e->name eq 'AbortError') {
+      warn "Canceled by the application!";
+    } else {
+      die $e;
+    }
+  })-> ... ;
+  
+  $ac->abort;
+
+=head1 DESCRIPTION
+
+The C<AbortController> object can be used to request for aborting an
+ongoing promise-based operation.
+
+=head1 METHODS
+
+There are following methods:
+
+=over 4
+
+=item $ac = AbortController->new
+
+Create a new abort controller.
+
+=item $signal = $ac->signal
+
+Return the L<AbortSignal> object of the controller.
+
+=item $ac->abort
+
+Signal to any observers that the associated activity is to be aborted.
+
+=back
+
+=head1 SPECIFICATIONS
+
+=over 4
+
+=item DOM
+
+DOM Standard <https://dom.spec.whatwg.org/>.
+
+=item DOMPERL
+
+DOM Binding for Perl <https://wiki.suikawiki.org/n/DOMPERL>.
+
+=back
+
+=head1 SEE ALSO
+
+L<AbortSignal>.
+
+=head1 AUTHOR
+
+Wakaba <wakaba@suikawiki.org>.
+
+=head1 LICENSE
+
+Copyright 2018 Wakaba <wakaba@suikawiki.org>.
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut

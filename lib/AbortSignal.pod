@@ -1,0 +1,91 @@
+=head1 NAME
+
+AbortSignal - DOM AbortSignal for Perl
+
+=head1 SYNOPSIS
+
+  sub operation {
+    my ($self, %args) = @_;
+    
+    my ($resolve, $reject);
+    my $p = Promise->new (sub { ($resolve, $reject) = @_ });
+    
+    my $signal = $args{signal};
+    if (defined $signal) {
+      if ($signal->aborted) {
+        return $reject->(new DOMException ('Aborted', 'AbortError'));
+      } else {
+        $signal->manakai_onabort (sub {
+          stop;
+          $reject->(new DOMException ('Aborted', 'AbortError'));
+        });
+      }
+    }
+    
+    run_until_stopped;
+    
+    return $p;
+  }
+
+=head1 DESCRIPTION
+
+The C<AbortSignal> object receives application's request of aborting.
+An C<AbortSignal> object is created by the L<AbortController> and is
+expected to be specified as an argument to the operation that abould
+be aborted.  The operation then register the abort handler to the
+C<AbortSignal> object received as an argument.
+
+=head1 METHODS
+
+There are following methods:
+
+=over 4
+
+=item $boolean = $signal->aborted
+
+Whether the signal's L<AbortController> object has signaled to abort
+or not.
+
+=item $signal->manakai_onabort ($code)
+
+Set the Perl code reference that is invoked when the abort is
+signaled.  The code is expected to abort the operation associated with
+the L<AbortSignal> object.  The code is not expected to throw any
+exception.
+
+=back
+
+It is considered as a good practice for the abortable operation to
+return a L<Promise> that is rejected whose C<name> method returns the
+string C<AbortError> if the operation is aborted.
+
+=head1 SPECIFICATIONS
+
+=over 4
+
+=item DOM
+
+DOM Standard <https://dom.spec.whatwg.org/>.
+
+=item DOMPERL
+
+DOM Binding for Perl <https://wiki.suikawiki.org/n/DOMPERL>.
+
+=back
+
+=head1 SEE ALSO
+
+L<AbortController>.
+
+=head1 AUTHOR
+
+Wakaba <wakaba@suikawiki.org>.
+
+=head1 LICENSE
+
+Copyright 2018 Wakaba <wakaba@suikawiki.org>.
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut
