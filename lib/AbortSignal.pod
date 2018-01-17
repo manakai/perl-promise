@@ -53,6 +53,13 @@ signaled.  The code is expected to abort the operation associated with
 the L<AbortSignal> object.  The code is not expected to throw any
 exception.
 
+=item $error = $signal->manakai_error
+
+Get a Perl exception object representing the C<AbortError> whose
+location (C<file_name> and C<line_number>) points the line where the
+C<< $controller->abort >> is invoked.  Before the C<abort> method is
+invoked, this method returns C<undef>.
+
 =back
 
 It is considered as a good practice for the abortable operation to

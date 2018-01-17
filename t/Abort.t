@@ -86,6 +86,53 @@ test {
   done $c;
 } n => 6, name => 'AbortSignal unused callback';
 
+test {
+  my $c = shift;
+
+  my $ac = AbortController->new;
+  is $ac->signal->manakai_error, undef;
+
+  $ac->abort;
+  my $e = $ac->signal->manakai_error;
+  is $ac->signal->manakai_error, $e;
+  isa_ok $e, 'Promise::AbortError';
+  is $e->name, 'AbortError';
+  is $e->message, 'Aborted';
+  is $e->file_name, __FILE__;
+  is $e->line_number, __LINE__-7;
+
+  my $f = rand;
+  $ac->signal->manakai_error ($f);
+  is $ac->signal->manakai_error, $f;
+
+  $ac->signal->manakai_error (undef);
+  is $ac->signal->manakai_error, undef;
+
+  done $c;
+} n => 9, name => 'manakai_error set by abort';
+
+test {
+  my $c = shift;
+
+  my $ac = AbortController->new;
+  is $ac->signal->manakai_error, undef;
+
+  my $f = rand;
+  $ac->signal->manakai_error ($f);
+  is $ac->signal->manakai_error, $f;
+
+  $ac->abort;
+  my $e = $ac->signal->manakai_error;
+  is $ac->signal->manakai_error, $e;
+  isa_ok $e, 'Promise::AbortError';
+  is $e->name, 'AbortError';
+  is $e->message, 'Aborted';
+  is $e->file_name, __FILE__;
+  is $e->line_number, __LINE__-7;
+
+  done $c;
+} n => 8, name => 'manakai_error set before abort';
+
 run_tests;
 
 =head1 LICENSE

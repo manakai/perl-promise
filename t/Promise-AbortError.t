@@ -32,10 +32,10 @@ test {
 
   my $error = new Promise::AbortError;
   is $error->name, 'AbortError';
-  is $error->message, '';
+  is $error->message, 'Aborted';
   is $error->file_name, __FILE__;
   is $error->line_number, __LINE__-4;
-  is $error . '', "AbortError at ".$error->file_name." line ".$error->line_number.".\n";
+  is $error . '', "AbortError: Aborted at ".$error->file_name." line ".$error->line_number.".\n";
   is $error->stringify, $error . '';
   done $c;
 } name => 'without message', n => 6;

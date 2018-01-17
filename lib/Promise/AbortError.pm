@@ -18,7 +18,7 @@ use overload
 
 sub new ($$) {
   my $self = bless {name => 'AbortError',
-                    message => defined $_[1] ? ''.$_[1] : ''}, $_[0];
+                    message => defined $_[1] ? ''.$_[1] : 'Aborted'}, $_[0];
   $self->_set_stacktrace;
   return $self;
 } # new

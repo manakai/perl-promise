@@ -19,6 +19,13 @@ sub manakai_onabort ($;$) {
 
 sub aborted ($) { $_[0]->{aborted} }
 
+sub manakai_error ($;$) {
+  if (@_ > 1) {
+    $_[0]->{error} = $_[1];
+  }
+  return $_[0]->{error};
+} # manakai_error
+
 sub _signal_abort ($) {
   my $signal = $_[0];
 
@@ -26,14 +33,14 @@ sub _signal_abort ($) {
   $signal->{aborted} = 1;
 
   ## Abort algorithms for Perl [DOMPERL]
+  $signal->{error} = Promise::AbortError->new;
   my $cb = $signal->{abort_cb};
   if (defined $cb) {
-    my $e = Promise::AbortError->new;
-    my $file = $e->file_name;
+    my $file = $signal->{error}->file_name;
     $file =~ s/[\x0D\x0A\x22]/_/g;
     my $code = sprintf q{#line %d "%s"
 $cb->();
-1}, $e->line_number, $file;
+1}, $signal->{error}->line_number, $file;
     eval $code or warn "$@\n"; # XXX report exception
     delete $signal->{abort_cb};
   }
