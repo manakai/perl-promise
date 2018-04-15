@@ -44,6 +44,9 @@ promise is fulfilled or rejected, with the same value.  When a promise
 is resolved with a non-promise value, the promise is fulfilled with
 the value.
 
+Note that fulfilling a promise without value is equivalent to
+fulfilling a promise with the value of C<undef>.
+
 For the purpose of resolution, any Perl object with the C<then> method
 defined is a promise.  That is, promise objects implementing other
 Perl classes can be used in mixture with these L<Promise> objects.
@@ -132,29 +135,66 @@ A promise has following methods:
 =item $p2 = $p->then ($onfulfilled, $onrejected)
 
 Register callback functions invoked when the promise is fulfilled or
-rejected.
+rejected.  The arguments are the fulfilled and rejected callbacks, in
+order.  The arguments can be omitted (or specify the C<undef> value).
 
-If the first argument is a code reference, it is invoked when the
-promise is fulfilled, with the result value as the first argument
-(C<$_[0]>).
+The fulfilled callback is invoked when the promise is fulfilled, with
+the value of the fulfillment as the argument.  The default fulfilled
+callback just returns the argument.
 
-If the second argument is a code reference, it is invoked when the
-promise is rejected, with the result value as the first argument
-(C<$_[0]>).
+The rejected callback is invoked when the promise is rejected, with
+the value of the rejection as the argument.  The default rejection
+callback just throws the argument.
 
-The method returns a new promise.  When the fulfilled or rejected
-callback is invoked, the new promise is resolved with the return value
-of the callback.  When the fulfilled or rejected callback throws an
-exception the new promise is rejected with the exception.  When the
-rejected callback is not specified or not a code reference and the
-original promise is rejected, the new promise is rejected with the
-result value of the original promise.
+The method returns a new promise.  If the fulfilled callback or the
+rejected callback returns a value, the new promise is resolved with
+the value.  If the fulfilled callback or the rejected callback throws
+an exception, the new promise is rejected with the exception.
+
+Examples:
+
+  Promise->resolve (3)->then (sub { warn shift }); # 3
+  Promise->reject (4)->then (sub { never }, sub { warn shift }); # 4
+  ...->then (sub { die 5 })
+     ->then (undef, sub { $_[0] })
+     ->then (sub { warn shift });               # 5
+  ...->then (sub { Promise->reject (6) })
+     ->then (undef, sub { warn shift });        # 6
+  ...->then (sub { die 7 })
+     ->then (sub { never }, sub { die $_[0] })  # die with 7
+  ...->then (sub { die 8 })
+     ->then (sub { 10 })
+     ->then (sub { never }, sub { warn $_[0] }) # 8
 
 =item $p2 = $p->catch ($onrejected)
 
-Register callback functions invoked when the promise is rejected.
-This method invocation has same effect as C<< $p2 = $p->then (undef,
-$onrejected) >>.
+Register a callback function invoked when the promise is rejected.
+The argument is the rejected callback.  This method has same effect as
+C<< $p2 = $p->then (undef, $onrejected) >>.
+
+=item $p2 = $p->finally ($onfinally)
+
+Register a callback function invoked when the promise is fulfilled or
+rejected.  The argument is the callback.
+
+The method returns a new promise.  If the callback throws an
+exception, or the callback returns a promise that is rejected with an
+exception, the new promise is rejected with the exception.  Otherwise,
+once the return value of the callback is resolved, the new promise is
+fulfilled with the value of the fulfillment of the original promise,
+or rejected with the exception of the rejection of the original
+promise.
+
+The callback can be used for e.g. closing any resource opened by
+preceding callbacks.
+
+Example:
+
+  $database->open->then (sub {
+    $database->... # or reject
+  })->finally (sub {
+    return $database->close;
+  });
 
 =item $cv = $p->to_cv
 

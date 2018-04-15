@@ -114,6 +114,8 @@ or aborting.
 
 =item $promise = promised_cleanup { ... } $promise
 
+This function is B<deprecated> in favor of C<< $promise->finally (sub { Promise->resolve->then (sub { ... })->finally }) >>.
+
 With a code block and promise, run the code just after the promise is
 resolved or rejected.  The code can return a promise.  This can be
 used to finally run a cleanup code after the main operations.

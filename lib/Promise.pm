@@ -275,6 +275,7 @@ sub reject ($$) {
 } # reject
 
 sub resolve ($$) {
+  ## PromiseResolve <https://tc39.github.io/ecma262/#sec-promise-resolve>
   return $_[1] if defined $_[1] and ref $_[1] eq $_[0]; ## IsPromise and constructor
   my $promise_capability = _new_promise_capability $_[0]; # or throw
   $promise_capability->{resolve}->($_[1]);
@@ -337,6 +338,30 @@ sub manakai_set_handled ($) {
   $_[0]->{promise_is_handled} = 1;
 } # manakai_set_handled
 
+## <https://tc39.github.io/ecma262/#sec-promise.prototype.finally>
+sub finally ($$) {
+  my $promise = $_[0];
+  my $onfinally = $_[1];
+  my $then_finally;
+  my $catch_finally;
+  if (ref $onfinally eq 'CODE') {
+    my $class = ref $promise;
+    $then_finally = sub {
+      my $v = $_[0]; # PromiseResolve
+      return $class->resolve ($onfinally->()) # or throw
+          ->then (sub { return $v });
+    };
+    $catch_finally = sub {
+      my $e = $_[0]; # PromiseResolve
+      return $class->resolve ($onfinally->()) # or throw
+          ->then (sub { die $e });
+    };
+  } else {
+    $then_finally = $catch_finally = $onfinally;
+  }
+  return $promise->then ($then_finally, $catch_finally); # or throw
+} # finally
+
 sub from_cv ($$) {
   my ($class, $cv) = @_;
   local $CallerLevel = 1;
@@ -392,7 +417,7 @@ sub DESTROY ($) {
 
 =head1 LICENSE
 
-Copyright 2014-2017 Wakaba <wakaba@suikawiki.org>.
+Copyright 2014-2018 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
