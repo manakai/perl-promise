@@ -465,6 +465,39 @@ test {
 
 test {
   my $c = shift;
+  my $ac = AbortController->new;
+
+  my $q;
+  my $invoked = 0;
+  my $name = rand;
+  my $p = promised_timeout {
+    return $q = promised_sleep (2)->then (sub { $invoked = 1 });
+  } 1, signal => $ac->signal, name => $name;
+
+  $p->then (sub {
+    test { ok 0 } $c;
+  }, sub {
+    my $e = $_[0];
+    test {
+      is $e->message, 'Timeout (1 s) - ' . $name;
+    } $c;
+    $ac->abort;
+    test {
+      ok $ac->signal->aborted;
+    } $c;
+    return $q;
+  })->then (sub {
+    test {
+      is $invoked, 1;
+    } $c;
+  })->then (sub {
+    done $c;
+    undef $c;
+  });
+} n => 3, name => 'timeout aborted after timeout';
+
+test {
+  my $c = shift;
   my @item;
   (promised_for {
     my $item = $_[0];
@@ -676,16 +709,46 @@ test {
   } timeout => 3)->then (sub {
     test { ok 0 } $c;
   }, sub {
+    my $err = $_[0];
     test {
       my $t2 = time;
       ok $t2 - $t1 < 3 + 2, "$t2 - $t1 = @{[$t2-$t1]} < 3";
       ok 0+@item < 3 + 2, 0+@item;
+      isa_ok $err, 'Promise::AbortError';
+      is $err->message, 'Timeout (3 s)';
     } $c;
   })->then (sub {
     done $c;
     undef $c;
   });
-} n => 2, name => 'promised_wait_until timeout';
+} n => 4, name => 'promised_wait_until timeout';
+
+test {
+  my $c = shift;
+  my $n = 0;
+  my @item;
+  my $name = rand;
+  my $t1 = time;
+  (promised_wait_until {
+    $n++;
+    push @item, $n;
+    return Promise->resolve ()->then (sub { return $n > 10 });
+  } timeout => 3, name => $name)->then (sub {
+    test { ok 0 } $c;
+  }, sub {
+    my $err = $_[0];
+    test {
+      my $t2 = time;
+      ok $t2 - $t1 < 3 + 2, "$t2 - $t1 = @{[$t2-$t1]} < 3";
+      ok 0+@item < 3 + 2, 0+@item;
+      isa_ok $err, 'Promise::AbortError';
+      is $err->message, 'Timeout (3 s) - '. $name;
+    } $c;
+  })->then (sub {
+    done $c;
+    undef $c;
+  });
+} n => 4, name => 'promised_wait_until timeout with name';
 
 test {
   my $c = shift;

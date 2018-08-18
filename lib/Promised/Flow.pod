@@ -76,6 +76,9 @@ number of seconds specified by the option (which does not have to be
 an integer).  Please note that any execution of the code at the time
 of timeout is not terminated.  The default is no timeout.
 
+If the C<name> option is specified, the value is used as part of the
+message of the C<AbortError> of any timeout.
+
 =item $promise = promised_sleep ($seconds, signal => $signal)
 
 Return a promise which is resolved after a time interval.  The
@@ -89,7 +92,7 @@ before the completion of the sleep, the promise is rejected with an
 exception whose C<name> method returns the string C<AbortError>
 without waiting for the time interval.
 
-=item $promise = promised_timeout { ... } $seconds, signal => $signal
+=item $promise = promised_timeout { ... } $seconds, signal => $signal, name => $string
 
 Run a code with timeout.  It returns a promise, which is resolved with
 the code's resolved value (note that the code can return a promise),
@@ -111,6 +114,10 @@ C<AbortError> without waiting for the timeout.
 
 Please note that the running code is not terminated after the timeout
 or aborting.
+
+Optionally, a string can be specified as C<< name => $string >>
+key/value pair at the end of the arguments.  If a name is specified,
+it is used as part of the message of the C<AbortError>.
 
 =item $promise = promised_cleanup { ... } $promise
 
