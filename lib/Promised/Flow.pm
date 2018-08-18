@@ -66,10 +66,11 @@ sub promised_sleep ($;%) {
 push @EXPORT, qw(promised_timeout);
 sub promised_timeout (&$;%) {
   my ($code, $sec, %args) = @_;
+  my $suffix = defined $args{name} ? " - $args{name}" : "";
   my $aborted = sub { };
   if (defined $args{signal}) {
     if ($args{signal}->aborted) {
-      return Promise->reject (Promise::AbortError->new ('Aborted by signal'));
+      return Promise->reject (Promise::AbortError->new ('Aborted by signal' . $suffix));
     } else {
       $args{signal}->manakai_onabort (sub {
         $aborted->();
@@ -79,7 +80,7 @@ sub promised_timeout (&$;%) {
   return Promise->resolve->then ($code) unless defined $sec;
   return Promise->new (sub {
     my ($ok, $ng) = @_;
-    my $to = Promise::AbortError->new ("Timeout ($sec s)");
+    my $to = Promise::AbortError->new ("Timeout ($sec s)$suffix");
     my $timer; $timer = AE::timer $sec, 0, sub {
       $ng->($to);
       undef $timer;
@@ -87,7 +88,7 @@ sub promised_timeout (&$;%) {
     };
     $aborted = sub {
       undef $timer;
-      $ng->(Promise::AbortError->new ('Aborted by signal'));
+      $ng->(Promise::AbortError->new ('Aborted by signal' . $suffix));
       $aborted = $ok = $ng = sub { };
     };
     Promise->resolve->then ($code)->then (sub {
@@ -162,7 +163,7 @@ sub promised_wait_until (&;%) {
     undef $timer;
   } promised_timeout {
     return $try->();
-  } $args{timeout};
+  } $args{timeout}, name => $args{name};
 } # promised_wait_until
 
 push @EXPORT, qw(promised_cv);
