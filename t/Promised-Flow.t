@@ -849,6 +849,123 @@ test {
   });
 } n => 2, name => 'promised_cv croaked';
 
+test {
+  my $c = shift;
+  my @x;
+  my $i = 0;
+  my $p = promised_until {
+    push @x, $i++;
+    return $i == 10;
+  };
+  test {
+    isa_ok $p, 'Promise';
+    is_deeply \@x, [], 'not yet invoked';
+  } $c;
+  $p->then (sub {
+    my $return = $_[0];
+    test {
+      is $return, undef, 'nothing returned';
+      is_deeply \@x, [0..9], 'invoked 10 times';
+    } $c;
+    done $c;
+    undef $c;
+  });
+} n => 4, name => 'promised_until';
+
+test {
+  my $c = shift;
+  my @x;
+  my $i = 0;
+  my $p = promised_until {
+    push @x, $i++;
+    return 1;
+  };
+  test {
+    isa_ok $p, 'Promise';
+    is_deeply \@x, [], 'not yet invoked';
+  } $c;
+  $p->then (sub {
+    my $return = $_[0];
+    test {
+      is $return, undef, 'nothing returned';
+      is_deeply \@x, [0], 'invoked 1 time';
+    } $c;
+    done $c;
+    undef $c;
+  });
+} n => 4, name => 'promised_until 1';
+
+test {
+  my $c = shift;
+  my @x;
+  my $i = 0;
+  my $p = promised_until {
+    push @x, $i++;
+    die "abc\n" if $i == 10;
+    return 0;
+  };
+  test {
+    isa_ok $p, 'Promise';
+    is_deeply \@x, [], 'not yet invoked';
+  } $c;
+  $p->then (sub { test { ok 0 } $c }, sub {
+    my $error = $_[0];
+    test {
+      is $error, "abc\n",
+      is_deeply \@x, [0..9], 'invoked 1 time';
+    } $c;
+    done $c;
+    undef $c;
+  });
+} n => 4, name => 'promised_until die';
+
+test {
+  my $c = shift;
+  my @x;
+  my $i = 0;
+  my $p = promised_until {
+    push @x, $i++;
+    return Promise->resolve->then (sub { die "abc\n" }) if $i == 10;
+    return 0;
+  };
+  test {
+    isa_ok $p, 'Promise';
+    is_deeply \@x, [], 'not yet invoked';
+  } $c;
+  $p->then (sub { test { ok 0 } $c }, sub {
+    my $error = $_[0];
+    test {
+      is $error, "abc\n",
+      is_deeply \@x, [0..9], 'invoked 1 time';
+    } $c;
+    done $c;
+    undef $c;
+  });
+} n => 4, name => 'promised_until reject';
+
+test {
+  my $c = shift;
+  my @x;
+  my $i = 0;
+  my $p = promised_until {
+    push @x, $i++;
+    return Promise->resolve->then (sub { $i == 10 });
+  };
+  test {
+    isa_ok $p, 'Promise';
+    is_deeply \@x, [], 'not yet invoked';
+  } $c;
+  $p->then (sub {
+    my $return = $_[0];
+    test {
+      is $return, undef, 'nothing returned';
+      is_deeply \@x, [0..9], 'invoked 10 times';
+    } $c;
+    done $c;
+    undef $c;
+  });
+} n => 4, name => 'promised_until promise returned';
+
 run_tests;
 
 =head1 LICENSE

@@ -132,6 +132,32 @@ sub promised_map (&$) {
   return $p->then (sub { return $new_list });
 } # promised_map
 
+push @EXPORT, qw(promised_until);
+sub promised_until (&) {
+  my $cb = shift;
+
+  my ($f, $j);
+  my $p = Promise->new (sub { ($f, $j) = @_ });
+
+  my $iter; $iter = sub {
+    Promise->resolve->then ($cb)->then (sub {
+      if ($_[0]) {
+        undef $iter;
+        $f->();
+      } else {
+        $iter->();
+      }
+      return undef;
+    }, sub {
+      undef $iter;
+      $j->($_[0]);
+    });
+  }; # $iter
+  $iter->();
+
+  return $p;
+} # promised_until
+
 push @EXPORT, qw(promised_wait_until);
 sub promised_wait_until (&;%) {
   my ($code, %args) = @_;

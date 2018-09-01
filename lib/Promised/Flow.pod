@@ -43,6 +43,9 @@ done.
 If an iteration fails, the returned promise is rejected.  Any
 remaining iteration is skipped.
 
+The array should be small enough.  For a long list of items,
+C<promised_until> should be used instead.
+
 =item $promise = promised_map { ... } [$item, $item, ...]
 
 With a code block and an array reference, run the code for each item
@@ -57,14 +60,27 @@ after the last iteration is done.
 If an iteration fails, the returned promise is rejected.  Any
 remaining iteration is skipped.
 
+=item $promise = promised_until { ... }
+
+With a code block, run the code repeatedly until the code is resolved
+with a true value.  The code can return a promise.
+
+It returns a promise which is resolved after the resolution of the
+code with a true value (or rejected with the error of the rejection of
+the code).
+
+See also C<promised_wait_until> for more complicated executions of
+loops.
+
 =item $promise = promised_wait_until { ... } NAME => VALUE, ...
 
 With a code block and optional options specified as name/value pairs,
-run the code repeatedly until the code resolved with a true value.
+run the code repeatedly until the code is resolved with a true value.
 The code can return a promise.
 
 It returns a promise which is resolved after the resolution of the
-code with a true value.
+code with a true value (or rejected with the error of the rejection of
+the code or an C<AbortError> as described later).
 
 If the C<interval> option is specified, it is interpreted as a number
 of seconds (which does not have to be an integer) of interval between
