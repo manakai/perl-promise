@@ -1,11 +1,12 @@
 package Promised::Flow;
 use strict;
 use warnings;
-our $VERSION = '2.0';
+our $VERSION = '3.0';
 use Carp;
 use AnyEvent;
 use Promise;
 use Promise::AbortError;
+use AbortController;
 
 our @EXPORT;
 push our @CARP_NOT, qw(Promise Promise::AbortError);
@@ -42,7 +43,6 @@ sub promised_sleep ($;%) {
       return Promise->reject (Promise::AbortError->new ('Aborted by signal'));
     } else {
       $args{signal}->manakai_onabort (sub {
-                                        warn Carp::longmess;
         $aborted->();
       });
     }
@@ -164,31 +164,27 @@ sub promised_wait_until (&;%) {
   $args{interval} ||= 1;
 
   my $timer;
-  my $try; $try = sub {
-    return Promise->resolve->then ($code)->then (sub {
-      if ($_[0]) {
-        return;
-      } else {
-        return unless defined $try;
-        ## Cancellable promise saves us...
-        return Promise->new (sub {
-          my ($ok) = @_;
-          $timer = AE::timer $args{interval}, 0, sub {
-            $ok->();
-            undef $timer;
-          };
-        })->then (sub {
-          return $try->() if defined $try;
-        });
-      }
-    });
-  }; # $try
-
+  my $ac = AbortController->new;
   return promised_cleanup {
-    undef $try;
+    $ac->abort;
     undef $timer;
   } promised_timeout {
-    return $try->();
+    return promised_until {
+      return Promise->resolve->then ($code)->then (sub {
+        if ($_[0]) {
+          return 'done';
+        } else {
+          return 'done' if $ac->signal->aborted;
+          return promised_sleep ($args{interval}, signal => $ac->signal)->then (sub {
+            return 'done' if $ac->signal->aborted;
+            return not 'done';
+          }, sub {
+            return 'done' if UNIVERSAL::isa ($_[0], 'Promise::AbortError');
+            die $_[0];
+          });
+        }
+      });
+    };
   } $args{timeout}, name => $args{name};
 } # promised_wait_until
 
