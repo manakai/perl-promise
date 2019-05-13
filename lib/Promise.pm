@@ -408,7 +408,7 @@ sub DESTROY ($) {
   }
   local $@;
   eval { die };
-  if ($@ =~ /during global destruction/) {
+  if ($@ =~ /during global destruction/ and not $_[0]->{is_global_variable}) {
     warn "$$: Reference to " . $_[0]->debug_info . " is not discarded before global destruction\n";
   }
 } # DESTROY
@@ -417,7 +417,7 @@ sub DESTROY ($) {
 
 =head1 LICENSE
 
-Copyright 2014-2018 Wakaba <wakaba@suikawiki.org>.
+Copyright 2014-2019 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

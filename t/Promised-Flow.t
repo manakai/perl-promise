@@ -752,6 +752,40 @@ test {
 
 test {
   my $c = shift;
+  my $n = 0;
+  my @item;
+  my $name = rand;
+  my $t1 = time;
+  my $ac = AbortController->new;
+  (promised_wait_until {
+    if ($n == 3) {
+      Promise->resolve->then (sub { $ac->abort });
+    }
+    $n++;
+    push @item, $n;
+    return Promise->resolve ()->then (sub { return $n > 10 });
+  } signal => $ac->signal, name => $name)->then (sub {
+    test { ok 0 } $c;
+  }, sub {
+    my $err = $_[0];
+    test {
+      my $t2 = time;
+      ok $t2 - $t1 < 3 + 2, "$t2 - $t1 = @{[$t2-$t1]} < 3";
+      ok 0+@item < 3 + 2, 0+@item;
+      isa_ok $err, 'Promise::AbortError';
+      is $err->name, 'AbortError';
+      is $err->message, 'Aborted by signal - '. $name;
+      is $err->file_name, __FILE__;
+      is $err->line_number, __LINE__+5;
+    } $c;
+  })->then (sub {
+    done $c;
+    undef $c;
+  });
+} n => 7, name => 'promised_wait_until signal aborted';
+
+test {
+  my $c = shift;
   my $i = 1;
   (promised_map {
     return Promise->resolve ($_[0])->then (sub { return $_[0] * 10 + $i++ });
@@ -966,11 +1000,112 @@ test {
   });
 } n => 4, name => 'promised_until promise returned';
 
+test {
+  my $c = shift;
+  my $ac = AbortController->new;
+  my $invoked = 0;
+  $ac->abort;
+  my $p = promised_until {
+    $invoked = 1;
+    return not 'done';
+  } signal => $ac->signal;
+  $p->then (sub {
+    test { ok 0 } $c;
+  }, sub {
+    my $e = $_[0];
+    test {
+      is $e->name, 'AbortError';
+      is $e->message, 'Aborted by signal';
+      is $e->file_name, __FILE__;
+      is $e->line_number, __LINE__-9;
+    } $c;
+  })->then (sub {
+    done $c;
+    undef $c;
+  });
+} n => 4, name => 'promised_until signal aborted';
+
+test {
+  my $c = shift;
+  my $ac = AbortController->new;
+  my $invoked = 0;
+  $ac->abort;
+  my $p = promised_until {
+    $invoked = 1;
+    return not 'done';
+  } signal => $ac->signal, name => my $name = rand;
+  $p->then (sub {
+    test { ok 0 } $c;
+  }, sub {
+    my $e = $_[0];
+    test {
+      is $invoked, 0;
+      is $e->name, 'AbortError';
+      is $e->message, 'Aborted by signal - ' . $name;
+      is $e->file_name, __FILE__;
+      is $e->line_number, __LINE__-10;
+    } $c;
+  })->then (sub {
+    done $c;
+    undef $c;
+  });
+} n => 5, name => 'promised_until signal aborted with name';
+
+test {
+  my $c = shift;
+  my $ac = AbortController->new;
+  my $invoked = 0;
+  my $p = promised_until {
+    $invoked++;
+    if ($invoked == 3) {
+      $ac->abort;
+    }
+    return not 'done';
+  } signal => $ac->signal, name => my $name = rand;
+  $p->then (sub {
+    test { ok 0 } $c;
+  }, sub {
+    my $e = $_[0];
+    test {
+      is $invoked, 3;
+      is $e->name, 'AbortError';
+      is $e->message, 'Aborted by signal - ' . $name;
+      is $e->file_name, __FILE__;
+      is $e->line_number, __LINE__-10;
+    } $c;
+  })->then (sub {
+    done $c;
+    undef $c;
+  });
+} n => 5, name => 'promised_until signal aborted during loop';
+
+test {
+  my $c = shift;
+  my $ac = AbortController->new;
+  my $invoked = 0;
+  my $p = promised_until {
+    $invoked++;
+    if ($invoked == 3) {
+      $ac->abort;
+      return 'done';
+    }
+    return not 'done';
+  } signal => $ac->signal, name => my $name = rand;
+  $p->then (sub {
+    test {
+      is $invoked, 3;
+    } $c;
+  })->then (sub {
+    done $c;
+    undef $c;
+  });
+} n => 1, name => 'promised_until signal aborted after done';
+
 run_tests;
 
 =head1 LICENSE
 
-Copyright 2016-2018 Wakaba <wakaba@suikawiki.org>.
+Copyright 2016-2019 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

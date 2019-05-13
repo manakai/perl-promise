@@ -60,7 +60,7 @@ after the last iteration is done.
 If an iteration fails, the returned promise is rejected.  Any
 remaining iteration is skipped.
 
-=item $promise = promised_until { ... }
+=item $promise = promised_until { ... } NAME => VALUE, ...
 
 With a code block, run the code repeatedly until the code is resolved
 with a true value.  The code can return a promise.
@@ -68,6 +68,15 @@ with a true value.  The code can return a promise.
 It returns a promise which is resolved after the resolution of the
 code with a true value (or rejected with the error of the rejection of
 the code).
+
+If the C<signal> option is specified, its value must be an
+L<AbortSignal> object.  If a signal object is specified and the
+L<AbortController> of the signal object is aborted before the
+condition is met, the promise is rejected with an exception whose
+C<name> method returns the string C<AbortError>.
+
+If the C<name> option is specified, the value is used as part of the
+message of the C<AbortError> of any abort.
 
 See also C<promised_wait_until> for more complicated executions of
 loops.
@@ -92,8 +101,14 @@ number of seconds specified by the option (which does not have to be
 an integer).  Please note that any execution of the code at the time
 of timeout is not terminated.  The default is no timeout.
 
+If the C<signal> option is specified, its value must be an
+L<AbortSignal> object.  If a signal object is specified and the
+L<AbortController> of the signal object is aborted before the
+condition is met, the promise is rejected with an exception whose
+C<name> method returns the string C<AbortError>.
+
 If the C<name> option is specified, the value is used as part of the
-message of the C<AbortError> of any timeout.
+message of the C<AbortError> of any timeout or abort.
 
 =item $promise = promised_sleep ($seconds, signal => $signal)
 
@@ -181,7 +196,7 @@ Wakaba <wakaba@suikawiki.org>.
 
 =head1 LICENSE
 
-Copyright 2016-2018 Wakaba <wakaba@suikawiki.org>.
+Copyright 2016-2019 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -1,7 +1,7 @@
 package Promised::Flow;
 use strict;
 use warnings;
-our $VERSION = '3.0';
+our $VERSION = '4.0';
 use Carp;
 use AnyEvent;
 use Promise;
@@ -22,15 +22,22 @@ sub import ($;@) {
   }
 } # import
 
+BEGIN {
+  my $pr = Promise->resolve;
+  eval q{ use constant PR => $pr };
+  $pr->{is_global_variable} = 1;
+  undef $pr;
+}
+
 push @EXPORT, qw(promised_cleanup);
 sub promised_cleanup (&$) {
   my ($code, $p) = @_;
   return $p->then (sub {
     my $return = $_[0];
-    return Promise->resolve->then ($code)->then (sub { return $return } );
+    return PR->then ($code)->then (sub { return $return } );
   }, sub {
     my $error = $_[0];
-    return Promise->resolve->then ($code)->then (sub { die $error }, sub { die $error });
+    return PR->then ($code)->then (sub { die $error }, sub { die $error });
   });
 } # promised_cleanup
 
@@ -77,7 +84,7 @@ sub promised_timeout (&$;%) {
       });
     }
   }
-  return Promise->resolve->then ($code) unless defined $sec;
+  return PR->then ($code) unless defined $sec;
   return Promise->new (sub {
     my ($ok, $ng) = @_;
     my $to = Promise::AbortError->new ("Timeout ($sec s)$suffix");
@@ -91,7 +98,7 @@ sub promised_timeout (&$;%) {
       $ng->(Promise::AbortError->new ('Aborted by signal' . $suffix));
       $aborted = $ok = $ng = sub { };
     };
-    Promise->resolve->then ($code)->then (sub {
+    PR->then ($code)->then (sub {
       my $result = $_[0];
       undef $timer;
       $ok->($result);
@@ -108,7 +115,7 @@ sub promised_timeout (&$;%) {
 push @EXPORT, qw(promised_for);
 sub promised_for (&$) {
   my ($code, $list) = @_;
-  my $p = Promise->resolve;
+  my $p = PR;
   for my $item (@$list) {
     $p = $p->then (sub {
       return $code->($item);
@@ -133,14 +140,21 @@ sub promised_map (&$) {
 } # promised_map
 
 push @EXPORT, qw(promised_until);
-sub promised_until (&) {
+sub promised_until (&;%) {
   my $cb = shift;
+  my %args = @_;
 
   my ($f, $j);
   my $p = Promise->new (sub { ($f, $j) = @_ });
 
   my $iter; $iter = sub {
-    Promise->resolve->then ($cb)->then (sub {
+    if (defined $args{signal} and $args{signal}->aborted) {
+      undef $iter;
+      my $suffix = defined $args{name} ? " - $args{name}" : "";
+      $j->(Promise::AbortError->new ('Aborted by signal' . $suffix));
+      return undef;
+    }
+    PR->then ($cb)->then (sub {
       if ($_[0]) {
         undef $iter;
         $f->();
@@ -152,6 +166,7 @@ sub promised_until (&) {
       undef $iter;
       $j->($_[0]);
     });
+    return undef;
   }; # $iter
   $iter->();
 
@@ -170,21 +185,13 @@ sub promised_wait_until (&;%) {
     undef $timer;
   } promised_timeout {
     return promised_until {
-      return Promise->resolve->then ($code)->then (sub {
-        if ($_[0]) {
-          return 'done';
-        } else {
-          return 'done' if $ac->signal->aborted;
-          return promised_sleep ($args{interval}, signal => $ac->signal)->then (sub {
-            return 'done' if $ac->signal->aborted;
-            return not 'done';
-          }, sub {
-            return 'done' if UNIVERSAL::isa ($_[0], 'Promise::AbortError');
-            die $_[0];
-          });
-        }
+      return PR->then ($code)->then (sub {
+        return 'done' if $_[0];
+        return promised_sleep ($args{interval}, signal => $ac->signal)->then (sub {
+          return not 'done';
+        });
       });
-    };
+    } signal => $args{signal}, name => $args{name};
   } $args{timeout}, name => $args{name};
 } # promised_wait_until
 
