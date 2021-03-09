@@ -211,11 +211,64 @@ test {
   })->then (sub { done $c; undef $c });
 } n => 1, name => 'catch no arg';
 
+test {
+  my $c = shift;
+  my $x = {};
+  my $y = {};
+  *test::class1::DESTROY = sub {
+    #warn "destroy";
+    $@ = $y;
+  };
+  my $obj = bless {}, 'test::class1';
+  Promise->resolve->then (sub {
+    die $x;
+  })->then (sub {
+    undef $obj;
+  }, sub {
+    my $e = $_[0];
+    #warn "catch $e";
+    test {
+      is $e, $x;
+    } $c;
+  })->finally (sub {
+    done $c;
+    undef $c;
+  });
+} n => 1, name => '$@ in DESTROY';
+
+test {
+  my $c = shift;
+  my $x = {};
+  my $y = {};
+  my $destroy_called = 0;
+  *test::class2::DESTROY = sub {
+    #warn "destroy";
+    $@ = $y;
+    $destroy_called++;
+  };
+  my $obj = bless {}, 'test::class2';
+  Promise->resolve->then (sub {
+    die $x;
+  })->then (sub {
+    undef $obj; # ref discarded when catch callback is invoked
+  }, sub {
+    my $e = $_[0];
+    #warn "catch $e";
+    test {
+      is $e, $x;
+      is $destroy_called, 1;
+    } $c;
+  })->finally (sub {
+    done $c;
+    undef $c;
+  });
+} n => 2, name => 'DESTROY';
+
 run_tests;
 
 =head1 LICENSE
 
-Copyright 2014 Wakaba <wakaba@suikawiki.org>.
+Copyright 2014-2021 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

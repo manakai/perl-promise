@@ -78,8 +78,11 @@ sub _fulfill_promise ($$) {
   my $promise = $_[0];
   my $reactions = delete $promise->{promise_fulfill_reactions};
   $promise->{promise_result} = $_[1];
-  delete $promise->{promise_reject_reactions};
+  my $x = delete $promise->{promise_reject_reactions};
   $promise->{promise_state} = 'fulfilled';
+
+  ## Run GC between promise callbacks
+  _enqueue { undef $x };
 
   ## TriggerPromiseReactions
   _enqueue_promise_reaction_job $_, $_[1] for @$reactions;
@@ -91,9 +94,12 @@ sub _reject_promise ($$) {
   my $promise = $_[0];
   my $reactions = delete $promise->{promise_reject_reactions};
   $promise->{promise_result} = $_[1];
-  delete $promise->{promise_fulfill_reactions};
+  my $x = delete $promise->{promise_fulfill_reactions};
   $promise->{promise_state} = 'rejected';
   _rejection_tracker_reject $promise unless $promise->{promise_is_handled};
+
+  ## Run GC between promise callbacks
+  _enqueue { undef $x };
 
   ## TriggerPromiseReactions
   _enqueue_promise_reaction_job $_, $_[1] for @$reactions;
@@ -417,7 +423,7 @@ sub DESTROY ($) {
 
 =head1 LICENSE
 
-Copyright 2014-2019 Wakaba <wakaba@suikawiki.org>.
+Copyright 2014-2021 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

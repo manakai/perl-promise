@@ -472,11 +472,38 @@ test {
   });
 } n => 1, name => 'then ng promise';
 
+test {
+  my $c = shift;
+  my $x = {};
+  my $y = {};
+  my $destroy_called = 0;
+  *test::class3::DESTROY = sub {
+    #warn "destroy";
+    $@ = $y;
+    $destroy_called++;
+  };
+  my $obj = bless {}, 'test::class3';
+  Promise->resolve->then (sub {
+    return $x;
+  })->then (sub {
+    my $e = $_[0];
+    test {
+      is $e, $x;
+      is $destroy_called, 1;
+    } $c;
+  }, sub {
+    undef $obj; # ref discarded when catch callback is invoked
+  })->finally (sub {
+    done $c;
+    undef $c;
+  });
+} n => 2, name => 'DESTROY';
+
 run_tests;
 
 =head1 LICENSE
 
-Copyright 2014-2017 Wakaba <wakaba@suikawiki.org>.
+Copyright 2014-2021 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
