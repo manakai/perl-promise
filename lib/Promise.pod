@@ -284,13 +284,19 @@ which abstracts common promise-based program control flows.
 
 L<AbortController>, L<AbortSignal>.
 
+=head1 HISTORY
+
+This repository was originally located at
+<https://github.com/wakaba/perl-promise>, which has been transferred
+to the manaki project on October 7, 2021.
+
 =head1 AUTHOR
 
 Wakaba <wakaba@suikawiki.org>.
 
 =head1 LICENSE
 
-Copyright 2014-2018 Wakaba <wakaba@suikawiki.org>.
+Copyright 2014-2021 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
