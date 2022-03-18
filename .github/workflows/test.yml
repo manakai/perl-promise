@@ -52,6 +52,7 @@
       },
       "test" : {
          "env" : {
+            "CIRCLE_ARTIFACTS" : "/tmp/circle-artifacts/test",
             "PMBP_PERL_VERSION" : "${{ matrix.perl_version }}"
          },
          "runs-on" : "ubuntu-latest",
@@ -60,10 +61,19 @@
                "uses" : "actions/checkout@v2"
             },
             {
+               "run" : "mkdir -p $CIRCLE_ARTIFACTS"
+            },
+            {
                "run" : "make test-deps"
             },
             {
                "run" : "make test"
+            },
+            {
+               "uses" : "actions/upload-artifact@v3",
+               "with" : {
+                  "path" : "/tmp/circle-artifacts/test"
+               }
             }
          ],
          "strategy" : {
