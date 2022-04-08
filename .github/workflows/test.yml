@@ -51,6 +51,7 @@
          ]
       },
       "test" : {
+         "continue-on-error" : "${{ matrix.experimental }}",
          "env" : {
             "CIRCLE_ARTIFACTS" : "/tmp/circle-artifacts/test",
             "PMBP_PERL_VERSION" : "${{ matrix.perl_version }}"
@@ -81,12 +82,15 @@
             "matrix" : {
                "include" : [
                   {
+                     "experimental" : false,
                      "perl_version" : "latest"
                   },
                   {
+                     "experimental" : false,
                      "perl_version" : "5.14.2"
                   },
                   {
+                     "experimental" : false,
                      "perl_version" : "5.8.9"
                   }
                ]
