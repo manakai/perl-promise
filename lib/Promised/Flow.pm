@@ -180,10 +180,7 @@ sub promised_wait_until (&;%) {
 
   my $timer;
   my $ac = AbortController->new;
-  return promised_cleanup {
-    $ac->abort;
-    undef $timer;
-  } promised_timeout {
+  return ((promised_timeout {
     return promised_until {
       return PR->then ($code)->then (sub {
         return 'done' if $_[0];
@@ -192,7 +189,10 @@ sub promised_wait_until (&;%) {
         });
       });
     } signal => $args{signal}, name => $args{name};
-  } $args{timeout}, name => $args{name};
+  } $args{timeout}, name => $args{name})->finally (sub {
+    $ac->abort;
+    undef $timer;
+  }));
 } # promised_wait_until
 
 push @EXPORT, qw(promised_cv);
@@ -206,7 +206,7 @@ sub promised_cv () {
 
 =head1 LICENSE
 
-Copyright 2016-2018 Wakaba <wakaba@suikawiki.org>.
+Copyright 2016-2022 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
