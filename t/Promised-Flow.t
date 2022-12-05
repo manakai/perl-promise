@@ -152,6 +152,31 @@ test {
   my $c = shift;
   my $ac = AbortController->new;
   $ac->abort;
+  my $name = time;
+  my $t1 = time;
+  promised_sleep (10, signal => $ac->signal, name => $name)->then (sub {
+    test { ok 0 } $c;
+  }, sub {
+    my $e = $_[0];
+    my $t2 = time;
+    test {
+      ok $t2 - $t1 < 1;
+      isa_ok $e, 'Promise::AbortError';
+      is $e->name, 'AbortError';
+      is $e->file_name, __FILE__;
+      is $e->line_number, __LINE__+6;
+      is $e->message, "Aborted by signal - $name";
+    } $c;
+  })->then (sub {
+    done $c;
+    undef $c;
+  });
+} n => 6, name => 'promised_sleep abort with name';
+
+test {
+  my $c = shift;
+  my $ac = AbortController->new;
+  $ac->abort;
   my $t1 = time;
   promised_sleep (10, signal => $ac->signal)->then (sub {
     test { ok 0 } $c;
@@ -1105,7 +1130,7 @@ run_tests;
 
 =head1 LICENSE
 
-Copyright 2016-2019 Wakaba <wakaba@suikawiki.org>.
+Copyright 2016-2022 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
