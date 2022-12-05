@@ -47,7 +47,11 @@ sub promised_sleep ($;%) {
   my $aborted = sub { };
   if (defined $args{signal}) {
     if ($args{signal}->aborted) {
-      return Promise->reject (Promise::AbortError->new ('Aborted by signal'));
+      if (defined $args{name}) {
+        return Promise->reject (Promise::AbortError->new ("Aborted by signal - $args{name}"));
+      } else {
+        return Promise->reject (Promise::AbortError->new ('Aborted by signal'));
+      }
     } else {
       $args{signal}->manakai_onabort (sub {
         $aborted->();
@@ -178,19 +182,29 @@ sub promised_wait_until (&;%) {
   my ($code, %args) = @_;
   $args{interval} ||= 1;
 
+  my $ac1 = AbortController->new;
+  my $ac2 = AbortController->new;
+  if (defined $args{signal}) {
+    $args{signal}->manakai_onabort (sub {
+      $ac1->abort;
+      $ac2->abort;
+    });
+  }
+
   my $timer;
-  my $ac = AbortController->new;
   return ((promised_timeout {
     return promised_until {
       return PR->then ($code)->then (sub {
         return 'done' if $_[0];
-        return promised_sleep ($args{interval}, signal => $ac->signal)->then (sub {
+        return promised_sleep ($args{interval}, signal => $ac1->signal, name => $args{name})->then (sub {
           return not 'done';
         });
       });
-    } signal => $args{signal}, name => $args{name};
+    } signal => $ac2->signal, name => $args{name};
   } $args{timeout}, name => $args{name})->finally (sub {
-    $ac->abort;
+    $ac1->abort;
+    $ac2->abort;
+    $args{signal}->manakai_onabort (undef) if defined $args{signal};
     undef $timer;
   }));
 } # promised_wait_until

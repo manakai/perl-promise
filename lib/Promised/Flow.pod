@@ -110,7 +110,7 @@ C<name> method returns the string C<AbortError>.
 If the C<name> option is specified, the value is used as part of the
 message of the C<AbortError> of any timeout or abort.
 
-=item $promise = promised_sleep ($seconds, signal => $signal)
+=item $promise = promised_sleep ($seconds, signal => $signal, name => $string)
 
 Return a promise which is resolved after a time interval.  The
 argument must be a number in seconds, representing the interval.  The
@@ -122,6 +122,10 @@ specified and the L<AbortController> of the signal object is aborted
 before the completion of the sleep, the promise is rejected with an
 exception whose C<name> method returns the string C<AbortError>
 without waiting for the time interval.
+
+Optionally, a string can be specified as C<< name => $string >>
+key/value pair at the end of the arguments.  If a name is specified,
+it is used as part of the message of the C<AbortError>.
 
 =item $promise = promised_timeout { ... } $seconds, signal => $signal, name => $string
 
@@ -196,7 +200,7 @@ Wakaba <wakaba@suikawiki.org>.
 
 =head1 LICENSE
 
-Copyright 2016-2019 Wakaba <wakaba@suikawiki.org>.
+Copyright 2016-2022 Wakaba <wakaba@suikawiki.org>.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
